@@ -1,10 +1,29 @@
-import React from 'react'
-
-// LexFlow Landing Page (single-file React component)
-// Built for Next.js pages or Vercel deployments.
-// Tailwind CSS assumed. Replace FORM_ACTION and MAIL_PLACEHOLDER with your services.
+"use client";
+import React from "react";
 
 export default function LexFlowLanding() {
+  // Call our backend to create a Stripe Checkout session and redirect
+  const handleCheckout = async (priceId: string) => {
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        alert("Checkout failed: " + err);
+        return;
+      }
+      const { url } = await res.json();
+      // Redirect browser to Stripe Checkout
+      window.location.href = url;
+    } catch (e) {
+      console.error(e);
+      alert("Network error creating checkout session.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-slate-900">
       <header className="max-w-6xl mx-auto p-6 flex items-center justify-between">
@@ -84,7 +103,13 @@ export default function LexFlowLanding() {
         <section id="pricing" className="py-10">
           <h3 className="text-2xl font-bold">Pricing</h3>
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
+            {/* Starter Card */}
+            <div
+              onClick={() => handleCheckout("price_1SIJnOE2OBuEBsraH7hBg3bP")}
+              role="button"
+              tabIndex={0}
+              className="bg-white p-6 rounded-lg shadow cursor-pointer hover:shadow-lg focus:outline-none"
+            >
               <div className="text-sm text-slate-500">Starter</div>
               <div className="mt-2 text-3xl font-extrabold">$49<span className="text-base font-medium">/mo</span></div>
               <div className="mt-3 text-sm text-slate-600">Single user, deadlines, reminders</div>
@@ -95,7 +120,13 @@ export default function LexFlowLanding() {
               </ul>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow ring-2 ring-indigo-100">
+            {/* Team Card */}
+            <div
+              onClick={() => handleCheckout("price_1SIK0JE2OBuEBsraQMNdGgtJ")}
+              role="button"
+              tabIndex={0}
+              className="bg-white p-6 rounded-lg shadow ring-2 ring-indigo-100 cursor-pointer hover:shadow-lg focus:outline-none"
+            >
               <div className="text-sm text-slate-500">Team</div>
               <div className="mt-2 text-3xl font-extrabold">$149<span className="text-base font-medium">/mo</span></div>
               <div className="mt-3 text-sm text-slate-600">Up to 10 users + AI checklists</div>
@@ -106,7 +137,13 @@ export default function LexFlowLanding() {
               </ul>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            {/* Firm Card */}
+            <div
+              onClick={() => handleCheckout("price_1SIK0oE2OBuEBsraw7cKEY2G")}
+              role="button"
+              tabIndex={0}
+              className="bg-white p-6 rounded-lg shadow cursor-pointer hover:shadow-lg focus:outline-none"
+            >
               <div className="text-sm text-slate-500">Firm</div>
               <div className="mt-2 text-3xl font-extrabold">$399<span className="text-base font-medium">/mo</span></div>
               <div className="mt-3 text-sm text-slate-600">Unlimited users + enterprise support</div>
@@ -144,26 +181,5 @@ export default function LexFlowLanding() {
         </footer>
       </main>
     </div>
-  )
+  );
 }
-
-/* README snippet (paste into your project root README.md):
-
-# LexFlow - Landing Page & Starter
-
-This is a single-file landing page component intended for Next.js + Tailwind deployments.
-
-Quick start:
-1. Create a Next.js app: `npx create-next-app@latest lexflow`.
-2. Install Tailwind (follow Tailwind + Next.js guide).
-3. Replace pages/index.tsx (or pages/index.jsx) with this component content.
-4. Replace `FORM_ACTION` in the form with your form provider endpoint (Formspree/Mailchimp/Netlify Forms).
-5. Configure env vars in Vercel: `NEXT_PUBLIC_STRIPE_KEY`, `OPENAI_API_KEY`, `AUTH_DOMAIN`.
-6. Deploy to Vercel: `vercel --prod`.
-
-Backend TODOs:
-- Add serverless API routes for waitlist handling, Stripe checkout sessions, and webhook verification.
-- Minimal backend: Node.js/Express or Next.js API routes using Supabase/Postgres for storing leads.
-- Integrate Clerk or Auth0 for authentication; use Stripe for billing.
-
-*/

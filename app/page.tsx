@@ -156,28 +156,8 @@ export default function LexFlowLanding() {
           </div>
         </section>
 
-        <section className="py-10">
-          <h3 className="text-2xl font-bold">What I built for you</h3>
-          <p className="mt-3 text-slate-600">This repository includes:</p>
-          <ul className="mt-3 list-disc list-inside text-sm text-slate-600">
-            <li>Next.js + Tailwind landing page (this file) for waitlist capture</li>
-            <li>README with deployment steps for Vercel/Netlify</li>
-            <li>Starter backend outline (serverless API routes) and env var placeholders</li>
-          </ul>
-
-          <div className="mt-6 bg-white p-4 rounded-lg text-sm">
-            <h4 className="font-semibold">Deployment notes</h4>
-            <ol className="mt-2 list-decimal list-inside text-slate-600">
-              <li>Install Tailwind in your Next.js app (official docs).</li>
-              <li>Replace <code>FORM_ACTION</code> with Mailchimp / Formspree / Netlify forms endpoint.</li>
-              <li>Set environment variables: <code>NEXT_PUBLIC_STRIPE_KEY</code>, <code>OPENAI_API_KEY</code>, <code>AUTH_DOMAIN</code>.</li>
-              <li>Deploy to Vercel and connect domain (e.g., lexflowlegal.com).</li>
-            </ol>
-          </div>
-        </section>
-
         <footer className="py-8 text-center text-sm text-slate-500">
-          Built for a fast MVP. Questions? Reply in chat and tell me which next piece you want: backend scaffold, Stripe integration, or investor pitch deck.
+          © 2025 LexFlow. All rights reserved.
         </footer>
       </main>
     </div>

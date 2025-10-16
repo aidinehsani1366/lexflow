@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import Link from "next/link";
+
 
 export default function LexFlowLanding() {
   // Call our backend to create a Stripe Checkout session and redirect
@@ -35,9 +37,10 @@ export default function LexFlowLanding() {
           </div>
         </div>
         <nav className="space-x-4 text-sm">
-          <a href="#features" className="hover:underline">Features</a>
-          <a href="#pricing" className="hover:underline">Pricing</a>
-          <a href="#waitlist" className="hover:underline">Join Waitlist</a>
+          <Link href="#features" className="hover:underline">Features</Link>
+          <Link href="#pricing" className="hover:underline">Pricing</Link>
+          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
+          <Link href="#waitlist" className="hover:underline">Join Waitlist</Link>
         </nav>
       </header>
 

@@ -39,8 +39,8 @@ export default function LexFlowLanding() {
         <nav className="space-x-4 text-sm">
           <Link href="#features" className="hover:underline">Features</Link>
           <Link href="#pricing" className="hover:underline">Pricing</Link>
-          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <Link href="#waitlist" className="hover:underline">Join Waitlist</Link>
+          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
         </nav>
       </header>
 

@@ -76,7 +76,7 @@ export default function LexFlowLanding() {
                 <input name="email" type="email" required className="mt-1 w-full rounded-md border p-2" placeholder="jane@firm.com" />
               </div>
               <div>
-                <button type="submit" className="w-full mt-2 inline-block px-4 py-2 bg-indigo-600 text-white rounded-md">Get early access</button>
+                <button type="submit" className="w-full mt-2 inline-block px-4 py-2 bg-indigo-600 text-white rounded-md cursor-pointer hover:bg-indigo-700 transition">Get early access</button>
               </div>
               <input type="hidden" name="ref" value="product-launch" />
             </form>

@@ -5,7 +5,7 @@ import AuthForm from "../../components/AuthForm";
 import UploadDocument from "../../components/UploadDocument";
 import UserMenu from "../../components/UserMenu";
 import FileList from "../../components/FileList";
-
+import DashboardLayout from "../../components/DashboardLayout"; // 👈 NEW import
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
@@ -35,26 +35,30 @@ export default function DashboardPage() {
   }
 
   if (!user) {
+    // 👇 wrap login screen in DashboardLayout too
     return (
-      <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center space-y-6">
-        <h1 className="text-2xl font-bold">Login to Your Dashboard</h1>
-        <AuthForm />
-      </main>
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center space-y-6 py-10">
+          <h1 className="text-2xl font-bold">Login to Your Dashboard</h1>
+          <AuthForm />
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 space-y-6">
-      <div className="flex justify-between w-full max-w-3xl items-center px-6">
-        <h1 className="text-2xl font-bold">Welcome, {user.email}</h1>
-        <UserMenu />
-      </div>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Upload card */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <UploadDocument />
+        </div>
 
-      <div className="w-full max-w-3xl">
-        <UploadDocument />
-        <FileList />
-
+        {/* File list card */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <FileList />
+        </div>
       </div>
-    </main>
+    </DashboardLayout>
   );
 }

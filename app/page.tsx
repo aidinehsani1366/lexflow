@@ -32,7 +32,7 @@ export default function LexFlowLanding() {
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-sky-400 rounded-lg flex items-center justify-center text-white font-bold">L</div>
           <div>
-            <h1 className="text-lg font-semibold">LexFlow</h1>
+            <h1 className="text-lg font-semibold">LexFlowLegal</h1>
             <p className="text-xs text-slate-500">AI case & compliance manager for small law firms</p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function LexFlowLanding() {
         <section className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center py-12">
           <div>
             <h2 className="text-4xl font-extrabold leading-tight">Simplify deadlines, filings, and compliance — with AI</h2>
-            <p className="mt-4 text-slate-600">LexFlow organizes case deadlines, auto-generates compliance checklists from your documents, and sends reliable reminders so small firms can focus on practicing law — not admin.</p>
+            <p className="mt-4 text-slate-600">LexFlowLegal organizes case deadlines, auto-generates compliance checklists from your documents, and sends reliable reminders so small firms can focus on practicing law — not admin.</p>
 
             <div className="mt-6 flex gap-3">
               <a href="#waitlist" className="inline-block px-5 py-3 bg-indigo-600 text-white rounded-lg shadow">Join the waitlist</a>
@@ -160,7 +160,7 @@ export default function LexFlowLanding() {
         </section>
 
         <footer className="py-8 text-center text-sm text-slate-500">
-          © 2025 LexFlow. All rights reserved.
+          © 2025 LexFlowLegal. All rights reserved.
         </footer>
       </main>
     </div>

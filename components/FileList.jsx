@@ -19,7 +19,10 @@ export default function FileList() {
 
       const { data, error } = await supabase.storage
         .from("documents")
-        .list(user.id + "/", { limit: 20, sortBy: { column: "created_at", order: "desc" } });
+        .list(user.id + "/", {
+          limit: 20,
+          sortBy: { column: "name", order: "asc" },
+        });
 
       if (error) throw error;
       setFiles(data || []);
@@ -71,11 +74,17 @@ export default function FileList() {
 
       if (error) throw error;
 
-      // Refresh file list
       loadFiles();
     } catch (err) {
       alert("Delete failed: " + err.message);
     }
+  };
+
+  const getFileIcon = (name) => {
+    if (name.endsWith(".pdf")) return "📄";
+    if (name.endsWith(".doc") || name.endsWith(".docx")) return "📝";
+    if (name.endsWith(".txt")) return "📃";
+    return "📁";
   };
 
   if (loading) return <div className="text-sm text-slate-500">Loading files...</div>;
@@ -85,7 +94,10 @@ export default function FileList() {
     <div className="mt-6">
       <h3 className="text-lg font-semibold mb-2">Your uploaded pleadings</h3>
       {files.length === 0 ? (
-        <p className="text-sm text-slate-500">No files yet. Upload one above.</p>
+        <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center text-slate-500">
+          <p className="text-lg">📂 No documents uploaded yet</p>
+          <p className="text-sm mt-1">Upload your first pleading to get started.</p>
+        </div>
       ) : (
         <ul className="space-y-2">
           {files.map((file) => (
@@ -93,7 +105,17 @@ export default function FileList() {
               key={file.name}
               className="flex justify-between items-center bg-white border rounded-md px-4 py-2 shadow-sm hover:shadow"
             >
-              <span>{file.name}</span>
+              <div className="flex items-center space-x-3">
+                <span className="text-xl">{getFileIcon(file.name)}</span>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{file.name}</p>
+                  {file.metadata?.last_modified && (
+                    <p className="text-xs text-slate-400">
+                      Uploaded {new Date(file.metadata.last_modified).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
               <div className="space-x-3">
                 <button
                   onClick={() => handleDownload(file.name)}

@@ -45,7 +45,7 @@ export default function UploadDocument() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text,
+          filePath,
           fileName: file.name,
           userId: user.id,
         }),

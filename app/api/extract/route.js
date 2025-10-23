@@ -6,7 +6,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Use service role key for DB inserts (⚠️ server-side only!)
+// Service role for inserts (server-side only)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,12 +14,21 @@ const supabase = createClient(
 
 export async function POST(req) {
   try {
-    const { text, fileName, userId } = await req.json();
-    if (!text || !fileName || !userId) {
-      return new Response("Missing text, fileName, or userId", { status: 400 });
+    const { filePath, fileName, userId } = await req.json();
+    if (!filePath || !fileName || !userId) {
+      return new Response("Missing filePath, fileName, or userId", { status: 400 });
     }
 
-    // AI step
+    // ✅ Download file from Supabase storage
+    const { data, error: downloadError } = await supabase.storage
+      .from("documents")
+      .download(filePath);
+
+    if (downloadError) throw downloadError;
+
+    const text = await data.text();
+
+    // ✅ AI step
     const prompt = `
 You are a legal assistant AI. Read the following pleading text and extract
 a list of required filings, supporting documents, and procedural steps.
@@ -38,20 +47,21 @@ ${text}
       completion.choices[0]?.message?.content?.trim() ||
       "No checklist generated.";
 
-    // Save to Supabase DB
-    const { error } = await supabase.from("checklists").insert({
+    // ✅ Save result to Supabase DB
+    const { error: dbError } = await supabase.from("checklists").insert({
       user_id: userId,
       file_name: fileName,
       checklist,
       created_at: new Date().toISOString()
     });
 
-    if (error) throw error;
+    if (dbError) throw dbError;
 
     return new Response(JSON.stringify({ checklist }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("AI extract error:", err);
     return new Response(err.message, { status: 500 });

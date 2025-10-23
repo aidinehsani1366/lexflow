@@ -17,6 +17,7 @@ export default function FileList() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in.");
 
+      // 👇 Fetch directly from the checklists table
       const { data, error } = await supabase
         .from("checklists")
         .select("*")
@@ -40,6 +41,7 @@ export default function FileList() {
     if (!confirm(`Delete "${row.file_name}"?`)) return;
 
     try {
+      // Delete row from DB
       const { error: dbError } = await supabase
         .from("checklists")
         .delete()
@@ -47,6 +49,7 @@ export default function FileList() {
 
       if (dbError) throw dbError;
 
+      // Delete from storage too (optional)
       const { error: storageError } = await supabase.storage
         .from("documents")
         .remove([`${row.user_id}/${row.file_name}`]);

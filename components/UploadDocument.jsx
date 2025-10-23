@@ -27,13 +27,11 @@ export default function UploadDocument() {
     setUploading(true);
 
     try {
-      // Get user from Supabase
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be signed in.");
 
-      // Upload file to Supabase Storage
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("documents")
@@ -41,20 +39,19 @@ export default function UploadDocument() {
 
       if (uploadError) throw uploadError;
 
-      // Extract text from file
       const text = await file.text();
 
-      // Send to AI extraction API
       const res = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          text,
+          fileName: file.name,
+          userId: user.id,
+        }),
       });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText);
-      }
+      if (!res.ok) throw new Error(await res.text());
 
       const { checklist } = await res.json();
       setChecklist(checklist);
@@ -71,7 +68,6 @@ export default function UploadDocument() {
       <h3 className="text-lg font-bold mb-4">Upload a Legal Document</h3>
 
       <form onSubmit={handleUpload} className="space-y-4">
-        {/* File picker (keeps old shape) */}
         <input
           type="file"
           accept=".txt,.pdf,.doc,.docx"
@@ -80,7 +76,6 @@ export default function UploadDocument() {
           className="block w-full text-sm text-gray-600 border border-gray-300 rounded-lg cursor-pointer focus:outline-none"
         />
 
-        {/* Upload button below */}
         <button
           type="submit"
           disabled={uploading}
@@ -90,14 +85,12 @@ export default function UploadDocument() {
         </button>
       </form>
 
-      {/* Show filename */}
       {file && (
         <div className="mt-4 text-sm text-gray-700">
           📄 <strong>{file.name}</strong> selected
         </div>
       )}
 
-      {/* Status messages */}
       {error && <p className="text-sm text-red-500 mt-2">❌ {error}</p>}
       {checklist && (
         <div className="mt-4 bg-slate-50 border rounded-md p-3 text-sm whitespace-pre-line text-left">

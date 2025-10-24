@@ -67,11 +67,13 @@ export default function UploadDocument({ caseId, onUploaded }) {
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg border border-slate-200 shadow-sm">
+    <div className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Upload a legal document</h3>
-          <p className="text-sm text-slate-500">We’ll store it in Supabase and extract a checklist.</p>
+          <h3 className="text-xl font-semibold text-slate-900">Upload a legal document</h3>
+          <p className="text-sm text-slate-500">
+            We’ll store it securely and extract a compliance checklist right away.
+          </p>
         </div>
       </div>
 
@@ -81,28 +83,32 @@ export default function UploadDocument({ caseId, onUploaded }) {
           accept=".txt,.pdf,.doc,.docx"
           onChange={handleFileChange}
           disabled={uploading}
-          className="block w-full text-sm text-gray-600 border border-gray-300 rounded-lg cursor-pointer focus:outline-none"
+          className="block w-full text-sm text-slate-600 border border-slate-200 rounded-2xl bg-white/80 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-100"
         />
 
         <button
           type="submit"
           disabled={uploading || !caseId}
-          className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition disabled:opacity-50"
+          className="w-full rounded-full bg-slate-900 text-white py-3 font-semibold hover:-translate-y-0.5 transition disabled:opacity-50"
         >
           {uploading ? "Uploading..." : "Upload"}
         </button>
       </form>
 
       {file && (
-        <div className="mt-4 text-sm text-gray-700">
+        <div className="mt-4 text-sm text-slate-600">
           📄 <strong>{file.name}</strong> selected
         </div>
       )}
 
-      {error && <p className="text-sm text-red-500 mt-2">❌ {error}</p>}
+      {error && (
+        <p className="text-sm text-red-500 mt-2" role="alert">
+          {error}
+        </p>
+      )}
       {checklist && (
-        <div className="mt-4 bg-slate-50 border rounded-md p-3 text-sm whitespace-pre-line text-left">
-          <h4 className="font-semibold mb-2">AI Compliance Checklist:</h4>
+        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm whitespace-pre-line text-left">
+          <h4 className="font-semibold mb-2">AI Compliance Checklist</h4>
           <p>{checklist}</p>
         </div>
       )}

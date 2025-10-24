@@ -38,11 +38,16 @@ export default function UserMenu() {
   if (!user) return null;
 
   return (
-    <div className="flex items-center space-x-4">
-      <p className="text-sm text-slate-600">👋 {user.email}</p>
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1">
+        <span className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+          {user.email?.charAt(0)?.toUpperCase() || "L"}
+        </span>
+        <p className="text-sm text-slate-600">{user.email}</p>
+      </div>
       <button
         onClick={handleLogout}
-        className="text-sm bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition"
+        className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:bg-slate-50"
       >
         Logout
       </button>

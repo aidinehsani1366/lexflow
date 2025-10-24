@@ -12,25 +12,28 @@ export default function CaseDocuments({ caseId }) {
 
   if (!caseId) {
     return (
-      <div className="rounded-xl bg-white p-6 shadow text-sm text-red-500">
-        No case selected.
+      <div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 p-8 text-center text-sm text-slate-500">
+        Select a case to start uploading documents.
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow space-y-6">
-      <header>
-        <h2 className="text-xl font-semibold text-slate-800">Documents</h2>
-        <p className="text-sm text-slate-500">
-          Upload pleadings, evidence, or correspondence scoped to this case.
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
+        <h2 className="text-2xl font-semibold text-slate-900">Documents</h2>
+        <p className="text-sm text-slate-500 mt-2">
+          Keep pleadings, discovery, and correspondence scoped to this workspace. Uploads sync
+          to Supabase storage and generate AI checklists instantly.
         </p>
-      </header>
+      </div>
       <UploadDocument
         caseId={caseId}
         onUploaded={() => setRefreshToken((prev) => prev + 1)}
       />
-      <FileList caseId={caseId} refreshToken={refreshToken} />
+      <div className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
+        <FileList caseId={caseId} refreshToken={refreshToken} />
+      </div>
     </div>
   );
 }

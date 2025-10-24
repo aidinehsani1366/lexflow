@@ -1,13 +1,20 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-export default function FileList() {
+export default function FileList({ caseId, refreshToken = 0 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadChecklists = async () => {
+    if (!caseId) {
+      setError("Missing case context.");
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -17,11 +24,11 @@ export default function FileList() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in.");
 
-      // 👇 Fetch directly from the checklists table
       const { data, error } = await supabase
         .from("checklists")
         .select("*")
         .eq("user_id", user.id)
+        .eq("case_id", caseId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -35,13 +42,13 @@ export default function FileList() {
 
   useEffect(() => {
     loadChecklists();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId, refreshToken]);
 
   const handleDelete = async (row) => {
     if (!confirm(`Delete "${row.file_name}"?`)) return;
 
     try {
-      // Delete row from DB
       const { error: dbError } = await supabase
         .from("checklists")
         .delete()
@@ -49,7 +56,6 @@ export default function FileList() {
 
       if (dbError) throw dbError;
 
-      // Delete from storage too (optional)
       const { error: storageError } = await supabase.storage
         .from("documents")
         .remove([`${row.user_id}/${row.file_name}`]);
@@ -66,11 +72,11 @@ export default function FileList() {
   if (error) return <div className="text-red-500 text-sm">Error: {error}</div>;
 
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-semibold mb-2">Your analyzed documents</h3>
+    <div className="space-y-3">
+      <h3 className="text-lg font-semibold">Analyzed documents</h3>
       {rows.length === 0 ? (
         <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center text-slate-500">
-          <p className="text-lg">📂 No documents uploaded yet</p>
+          <p className="text-lg">📂 No documents for this case yet</p>
           <p className="text-sm mt-1">Upload your first pleading to get started.</p>
         </div>
       ) : (

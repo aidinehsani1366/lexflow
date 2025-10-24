@@ -12,6 +12,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB storage limit
+const MAX_CONTEXT_CHARS = 40_000; // roughly ~10K tokens
+
 async function ensureCaseAccess(caseId, userId) {
   const { data: caseRow, error: caseError } = await supabase
     .from("cases")
@@ -60,7 +63,21 @@ export async function POST(req) {
 
     if (downloadError) throw downloadError;
 
-    const text = await data.text();
+    if (data.size > MAX_FILE_BYTES) {
+      return new Response("File exceeds 5MB limit. Please upload a smaller document.", {
+        status: 413,
+      });
+    }
+
+    let text = await data.text();
+    let truncatedNotice = "";
+    let truncated = false;
+    if (text.length > MAX_CONTEXT_CHARS) {
+      text = text.slice(0, MAX_CONTEXT_CHARS);
+      truncated = true;
+      truncatedNotice =
+        "\n\n[Document truncated to the first 40k characters to fit AI context limits.]";
+    }
 
     // ✅ AI step
     const prompt = `
@@ -70,6 +87,7 @@ Return your response as a clear, numbered checklist.
 
 Pleading:
 ${text}
+${truncatedNotice}
 `;
 
     const completion = await openai.chat.completions.create({
@@ -94,7 +112,7 @@ ${text}
 
     if (dbError) throw dbError;
 
-    return new Response(JSON.stringify({ checklist }), {
+    return new Response(JSON.stringify({ checklist, truncated }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

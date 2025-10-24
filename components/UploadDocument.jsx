@@ -18,11 +18,21 @@ export default function UploadDocument({ caseId, onUploaded }) {
   const [error, setError] = useState("");
   const [documentType, setDocumentType] = useState(documentTypes[0]);
   const [notes, setNotes] = useState("");
+  const [wasTruncated, setWasTruncated] = useState(false);
+
+  const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0];
+    if (selected && selected.size > MAX_FILE_BYTES) {
+      setError("File too large. Please upload a document under 5MB.");
+      setFile(null);
+      setWasTruncated(false);
+      return;
+    }
     setFile(selected || null);
     setChecklist("");
+    setWasTruncated(false);
     setError("");
   };
 
@@ -68,14 +78,16 @@ export default function UploadDocument({ caseId, onUploaded }) {
 
       if (!res.ok) throw new Error(await res.text());
 
-      const { checklist } = await res.json();
+      const { checklist, truncated } = await res.json();
       setChecklist(checklist);
+      setWasTruncated(!!truncated);
       setFile(null);
       setNotes("");
       setDocumentType(documentTypes[0]);
       onUploaded?.();
     } catch (err) {
       setError(err.message);
+      setWasTruncated(false);
     } finally {
       setUploading(false);
     }
@@ -151,6 +163,11 @@ export default function UploadDocument({ caseId, onUploaded }) {
         <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm whitespace-pre-line text-left">
           <h4 className="font-semibold mb-2">AI Compliance Checklist</h4>
           <p>{checklist}</p>
+          {wasTruncated && (
+            <p className="mt-2 text-xs text-slate-500">
+              Only the first portion of the document was analyzed due to size limits.
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -65,7 +65,7 @@ export default function CaseWorkspace({ params }) {
       case "ai":
         return <CaseChat caseId={caseData?.id} />;
       case "members":
-        return <CaseMembers />;
+        return <CaseMembers caseId={caseData?.id} />;
       default:
         return <CaseOverview caseData={caseData} />;
     }

@@ -14,6 +14,13 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [casesLoading, setCasesLoading] = useState(false);
   const [casesError, setCasesError] = useState("");
+  const [metrics, setMetrics] = useState({
+    activeCases: 0,
+    docsThisWeek: 0,
+    aiPromptsThisWeek: 0,
+  });
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState("");
 
   useEffect(() => {
     // Check if a user session exists
@@ -63,6 +70,39 @@ export default function DashboardPage() {
     };
     fetchCases();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchMetrics = async () => {
+      setMetricsLoading(true);
+      setMetricsError("");
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          setMetrics({
+            activeCases: 0,
+            docsThisWeek: 0,
+            aiPromptsThisWeek: 0,
+          });
+          setMetricsLoading(false);
+          return;
+        }
+        const res = await fetch("/api/dashboard/metrics", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload.error || "Failed to load metrics");
+        setMetrics(payload.data || {});
+      } catch (err) {
+        console.error(err);
+        setMetricsError(err.message);
+      } finally {
+        setMetricsLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, [user, cases.length]);
 
   const handleCreateCase = async (title) => {
     setCreating(true);
@@ -136,11 +176,16 @@ export default function DashboardPage() {
             {casesError}
           </div>
         )}
+        {metricsError && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            Metrics unavailable: {metricsError}
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            { label: "Active cases", value: cases.length || "0" },
-            { label: "Docs analyzed this week", value: "—" },
-            { label: "AI prompts sent", value: "—" },
+            { label: "Active cases", value: metrics.activeCases || 0 },
+            { label: "Docs analyzed this week", value: metrics.docsThisWeek || 0 },
+            { label: "AI prompts sent", value: metrics.aiPromptsThisWeek || 0 },
           ].map((item) => (
             <div
               key={item.label}
@@ -149,7 +194,11 @@ export default function DashboardPage() {
               <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
                 {item.label}
               </p>
-              <p className="mt-3 text-3xl font-semibold text-slate-900">{item.value}</p>
+              {metricsLoading ? (
+                <div className="mt-3 h-6 w-16 rounded-full bg-slate-200 animate-pulse" />
+              ) : (
+                <p className="mt-3 text-3xl font-semibold text-slate-900">{item.value}</p>
+              )}
             </div>
           ))}
         </div>

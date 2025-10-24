@@ -2,10 +2,25 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+const documentTypes = [
+  "Pleading",
+  "Discovery",
+  "Correspondence",
+  "Evidence",
+  "Compliance",
+  "Other",
+];
+
 export default function FileList({ caseId, refreshToken = 0 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    file_name: "",
+    document_type: documentTypes[0],
+    notes: "",
+  });
 
   const loadChecklists = async () => {
     if (!caseId) {
@@ -44,6 +59,44 @@ export default function FileList({ caseId, refreshToken = 0 }) {
     loadChecklists();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId, refreshToken]);
+
+  const startEditing = (row) => {
+    setEditingId(row.id);
+    setFormData({
+      file_name: row.file_name || "",
+      document_type: row.document_type || documentTypes[0],
+      notes: row.notes || "",
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setFormData({
+      file_name: "",
+      document_type: documentTypes[0],
+      notes: "",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!editingId) return;
+    try {
+      const { error: updateError } = await supabase
+        .from("checklists")
+        .update({
+          file_name: formData.file_name.trim() || "Untitled document",
+          document_type: formData.document_type,
+          notes: formData.notes || null,
+        })
+        .eq("id", editingId);
+
+      if (updateError) throw updateError;
+      cancelEditing();
+      loadChecklists();
+    } catch (err) {
+      alert("Update failed: " + err.message);
+    }
+  };
 
   const handleDelete = async (row) => {
     if (!confirm(`Delete "${row.file_name}"?`)) return;
@@ -116,16 +169,85 @@ export default function FileList({ caseId, refreshToken = 0 }) {
                     Uploaded {new Date(row.created_at).toLocaleString()}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleDelete(row)}
-                  className="text-xs uppercase tracking-wide text-red-500 hover:text-red-700"
-                >
-                  Delete
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => startEditing(row)}
+                    className="text-xs uppercase tracking-wide text-slate-500 hover:text-slate-800"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(row)}
+                    className="text-xs uppercase tracking-wide text-red-500 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div className="mt-2 text-sm text-slate-600 whitespace-pre-line">
-                {row.checklist}
+              <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                <span className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 font-semibold">
+                  {row.document_type || "General"}
+                </span>
+                <span>
+                  Notes: {row.notes ? row.notes : "—"}
+                </span>
               </div>
+              {editingId === row.id ? (
+                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    value={formData.file_name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, file_name: e.target.value }))
+                    }
+                    placeholder="Document name"
+                  />
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    value={formData.document_type}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, document_type: e.target.value }))
+                    }
+                  >
+                    {documentTypes.map((type) => (
+                      <option key={type}>{type}</option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    rows={2}
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                    }
+                    placeholder="Notes"
+                  />
+                  <div className="flex justify-end gap-2 text-sm">
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      className="rounded-full border border-slate-200 px-4 py-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      className="rounded-full bg-slate-900 px-4 py-1 text-white"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 text-sm text-slate-600 space-y-1">
+                  {row.checklist
+                    ? row.checklist.split(/\n+/).map((line, idx) => (
+                        <p key={idx}>• {line.trim()}</p>
+                      ))
+                    : "No checklist generated."}
+                </div>
+              )}
             </li>
           ))}
         </ul>

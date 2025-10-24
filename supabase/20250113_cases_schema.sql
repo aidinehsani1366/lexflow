@@ -32,6 +32,10 @@ create table if not exists public.case_messages (
 -- 4. Checklists now relate to cases (nullable for legacy rows)
 alter table if exists public.checklists
   add column if not exists case_id uuid references public.cases(id) on delete set null;
+alter table if exists public.checklists
+  add column if not exists document_type text default 'General';
+alter table if exists public.checklists
+  add column if not exists notes text;
 
 -- 5. Enable row-level security
 alter table public.cases enable row level security;
@@ -39,6 +43,14 @@ alter table public.case_members enable row level security;
 alter table public.case_messages enable row level security;
 
 -- 6. Policies -------------------------------------------------------------
+
+drop policy if exists "cases_select_owner_or_member" on public.cases;
+drop policy if exists "cases_modify_owner_only" on public.cases;
+drop policy if exists "case_members_select_self_only" on public.case_members;
+drop policy if exists "case_members_delete_self_only" on public.case_members;
+drop policy if exists "case_messages_select_members" on public.case_messages;
+drop policy if exists "case_messages_insert_members" on public.case_messages;
+drop policy if exists "checklists_case_members" on public.checklists;
 
 -- Helper policy condition: owner or member
 create policy "cases_select_owner_or_member"

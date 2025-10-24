@@ -46,7 +46,7 @@ async function ensureCaseAccess(caseId, userId) {
 
 export async function POST(req) {
   try {
-    const { filePath, fileName, userId, caseId } = await req.json();
+    const { filePath, fileName, userId, caseId, documentType, notes } = await req.json();
     if (!filePath || !fileName || !userId || !caseId) {
       return new Response("Missing filePath, fileName, caseId, or userId", { status: 400 });
     }
@@ -88,6 +88,8 @@ ${text}
       checklist,
       created_at: new Date().toISOString(),
       case_id: caseId,
+      document_type: documentType || "General",
+      notes: notes || null,
     });
 
     if (dbError) throw dbError;

@@ -2,11 +2,22 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+const documentTypes = [
+  "Pleading",
+  "Discovery",
+  "Correspondence",
+  "Evidence",
+  "Compliance",
+  "Other",
+];
+
 export default function UploadDocument({ caseId, onUploaded }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [checklist, setChecklist] = useState("");
   const [error, setError] = useState("");
+  const [documentType, setDocumentType] = useState(documentTypes[0]);
+  const [notes, setNotes] = useState("");
 
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0];
@@ -50,6 +61,8 @@ export default function UploadDocument({ caseId, onUploaded }) {
           fileName: file.name,
           userId: user.id,
           caseId,
+          documentType,
+          notes: notes.trim() || null,
         }),
       });
 
@@ -58,6 +71,8 @@ export default function UploadDocument({ caseId, onUploaded }) {
       const { checklist } = await res.json();
       setChecklist(checklist);
       setFile(null);
+      setNotes("");
+      setDocumentType(documentTypes[0]);
       onUploaded?.();
     } catch (err) {
       setError(err.message);
@@ -85,6 +100,32 @@ export default function UploadDocument({ caseId, onUploaded }) {
           disabled={uploading}
           className="block w-full text-sm text-slate-600 border border-slate-200 rounded-2xl bg-white/80 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-100"
         />
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="text-sm text-slate-600">
+            Document type
+            <select
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+            >
+              {documentTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-slate-600">
+            Notes (optional)
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              placeholder="Exhibits missing signature page"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </label>
+        </div>
 
         <button
           type="submit"

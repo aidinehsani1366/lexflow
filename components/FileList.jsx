@@ -68,23 +68,46 @@ export default function FileList({ caseId, refreshToken = 0 }) {
     }
   };
 
-  if (loading) return <div className="text-sm text-slate-500">Loading documents...</div>;
-  if (error) return <div className="text-red-500 text-sm">Error: {error}</div>;
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <div className="h-6 w-40 rounded-full bg-slate-200 animate-pulse" />
+        <div className="space-y-2">
+          {[0, 1].map((key) => (
+            <div key={key} className="h-20 rounded-2xl bg-slate-100 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        Error: {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-semibold">Analyzed documents</h3>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-slate-900">Analyzed documents</h3>
+        <p className="text-sm text-slate-500">
+          LexFlow stores AI checklists alongside each uploaded pleading.
+        </p>
+      </div>
       {rows.length === 0 ? (
-        <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center text-slate-500">
+        <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-slate-500">
           <p className="text-lg">📂 No documents for this case yet</p>
           <p className="text-sm mt-1">Upload your first pleading to get started.</p>
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {rows.map((row) => (
             <li
               key={row.id}
-              className="flex flex-col bg-white border rounded-md px-4 py-3 shadow-sm hover:shadow"
+              className="flex flex-col border border-white/70 bg-white/90 rounded-2xl px-4 py-3 shadow-sm hover:-translate-y-0.5 transition"
             >
               <div className="flex justify-between items-center">
                 <div>
@@ -95,7 +118,7 @@ export default function FileList({ caseId, refreshToken = 0 }) {
                 </div>
                 <button
                   onClick={() => handleDelete(row)}
-                  className="text-red-600 hover:underline text-sm"
+                  className="text-xs uppercase tracking-wide text-red-500 hover:text-red-700"
                 >
                   Delete
                 </button>

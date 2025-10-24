@@ -43,7 +43,10 @@ export default function DashboardPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) {
-          throw new Error("No session token found");
+          setCases([]);
+          setCasesError("");
+          setCasesLoading(false);
+          return;
         }
         const res = await fetch("/api/cases", {
           headers: { Authorization: `Bearer ${token}` },
@@ -67,7 +70,10 @@ export default function DashboardPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("No session token found");
+      if (!token) {
+        setCasesError("Please sign in again to create a case.");
+        return;
+      }
 
       const res = await fetch("/api/cases", {
         method: "POST",
@@ -95,25 +101,58 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    // 👇 wrap login screen in DashboardLayout too
     return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center space-y-6 py-10">
-          <h1 className="text-2xl font-bold">Login to Your Dashboard</h1>
+      <div className="min-h-screen grid lg:grid-cols-2">
+        <div className="hidden lg:flex flex-col justify-between bg-slate-900 text-white p-10">
+          <div>
+            <p className="text-xs uppercase tracking-[0.4em] text-white/50">
+              LexFlow Case OS
+            </p>
+            <h1 className="mt-4 text-4xl font-semibold leading-tight">
+              Every matter, checklist, and chat in one elegant workspace.
+            </h1>
+            <p className="mt-6 text-white/70">
+              Secure by design. Built for boutique firms that want clarity across
+              litigation, compliance, and advisory work.
+            </p>
+          </div>
+          <div className="space-y-2 text-sm text-white/60">
+            <p>“Our team runs every discovery motion through LexFlow.”</p>
+            <p>— Priya Menon, Managing Partner</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center bg-gradient-to-b from-white to-slate-50 px-6 py-16">
           <AuthForm />
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-3">
+      <div className="space-y-6">
         {casesError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {casesError}
           </div>
         )}
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { label: "Active cases", value: cases.length || "0" },
+            { label: "Docs analyzed this week", value: "—" },
+            { label: "AI prompts sent", value: "—" },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-2xl border border-white/80 bg-white/90 p-5 shadow-sm"
+            >
+              <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
+                {item.label}
+              </p>
+              <p className="mt-3 text-3xl font-semibold text-slate-900">{item.value}</p>
+            </div>
+          ))}
+        </div>
         <CaseList
           cases={cases}
           onCreate={handleCreateCase}

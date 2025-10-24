@@ -92,7 +92,7 @@ export async function POST(req, { params }) {
       return jsonResponse({ error: "Message content is required" }, 400);
     }
 
-    const { data: userMessage, error: userMsgError } = await supabaseAdmin
+    const { error: userMsgError } = await supabaseAdmin
       .from("case_messages")
       .insert({
         case_id: caseId,
@@ -136,7 +136,7 @@ export async function POST(req, { params }) {
       aiContent = "AI is not configured yet. Please set OPENAI_API_KEY to enable responses.";
     }
 
-    const { data: aiMessage, error: aiMsgError } = await supabaseAdmin
+    const { error: aiMsgError } = await supabaseAdmin
       .from("case_messages")
       .insert({
         case_id: caseId,

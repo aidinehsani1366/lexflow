@@ -72,7 +72,7 @@ export default function CaseChat({ caseId }) {
   }
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow space-y-4">
+    <div className="rounded-3xl border border-white/80 bg-white/90 p-8 shadow-sm space-y-6">
       <header>
         <h2 className="text-xl font-semibold text-slate-800">AI Workspace</h2>
         <p className="text-sm text-slate-500">

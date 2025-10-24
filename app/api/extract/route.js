@@ -12,12 +12,46 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+async function ensureCaseAccess(caseId, userId) {
+  const { data: caseRow, error: caseError } = await supabase
+    .from("cases")
+    .select("id, user_id")
+    .eq("id", caseId)
+    .single();
+
+  if (caseError || !caseRow) {
+    throw new Error(caseError?.message || "Case not found");
+  }
+
+  if (caseRow.user_id === userId) return true;
+
+  const { data: memberRows, error: memberError } = await supabase
+    .from("case_members")
+    .select("member_id")
+    .eq("case_id", caseId)
+    .eq("member_id", userId);
+
+  if (memberError) {
+    throw new Error(memberError.message);
+  }
+
+  if (!memberRows || memberRows.length === 0) {
+    const err = new Error("Forbidden");
+    err.status = 403;
+    throw err;
+  }
+
+  return true;
+}
+
 export async function POST(req) {
   try {
-    const { filePath, fileName, userId } = await req.json();
-    if (!filePath || !fileName || !userId) {
-      return new Response("Missing filePath, fileName, or userId", { status: 400 });
+    const { filePath, fileName, userId, caseId } = await req.json();
+    if (!filePath || !fileName || !userId || !caseId) {
+      return new Response("Missing filePath, fileName, caseId, or userId", { status: 400 });
     }
+
+    await ensureCaseAccess(caseId, userId);
 
     // ✅ Download file from Supabase storage
     const { data, error: downloadError } = await supabase.storage
@@ -52,7 +86,8 @@ ${text}
       user_id: userId,
       file_name: fileName,
       checklist,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      case_id: caseId,
     });
 
     if (dbError) throw dbError;
@@ -64,6 +99,7 @@ ${text}
 
   } catch (err) {
     console.error("AI extract error:", err);
-    return new Response(err.message, { status: 500 });
+    const status = err.status || 500;
+    return new Response(err.message, { status });
   }
 }

@@ -12,7 +12,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB storage limit
+const EMBEDDING_MODEL = "text-embedding-3-small";
+const CHUNK_CHAR_LIMIT = 1200;
+const MAX_CONTEXT_CHARS = 40000;
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+
+function chunkText(text) {
+  const chunks = [];
+  let start = 0;
+  let index = 0;
+  while (start < text.length) {
+    const end = Math.min(start + CHUNK_CHAR_LIMIT, text.length);
+    const slice = text.slice(start, end).trim();
+    if (slice) {
+      chunks.push({ index, content: slice });
+      index += 1;
+    }
+    start = end;
+  }
+  return chunks;
+}
+
 const MAX_CONTEXT_CHARS = 40_000; // roughly ~10K tokens
 
 async function ensureCaseAccess(caseId, userId) {
@@ -77,6 +97,42 @@ export async function POST(req) {
       truncated = true;
       truncatedNotice =
         "\n\n[Document truncated to the first 40k characters to fit AI context limits.]";
+    }
+
+    const { data: document, error: documentError } = await supabase
+      .from("case_documents")
+      .insert({
+        case_id: caseId,
+        user_id: userId,
+        file_name: fileName,
+        file_path: filePath,
+      })
+      .select()
+      .single();
+
+    if (documentError) throw documentError;
+
+    const chunks = chunkText(text);
+    if (chunks.length > 0 && process.env.OPENAI_API_KEY) {
+      try {
+        const embeddingResponse = await openai.embeddings.create({
+          model: EMBEDDING_MODEL,
+          input: chunks.map((chunk) => chunk.content),
+        });
+
+        const chunkRows = chunks.map((chunk, idx) => ({
+          document_id: document.id,
+          chunk_index: chunk.index,
+          content: chunk.content,
+          embedding: embeddingResponse.data[idx]?.embedding || null,
+        }));
+
+        if (chunkRows.length > 0) {
+          await supabase.from("document_chunks").insert(chunkRows);
+        }
+      } catch (embeddingError) {
+        console.error("Embedding generation failed:", embeddingError);
+      }
     }
 
     // ✅ AI step

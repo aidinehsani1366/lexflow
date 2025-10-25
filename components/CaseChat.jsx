@@ -106,7 +106,7 @@ export default function CaseChat({ caseId }) {
       <header className="space-y-1">
         <h2 className="text-xl font-semibold text-slate-800">AI Workspace</h2>
         <p className="text-sm text-slate-500">
-          Ask LexFlow about filings, deadlines, or track action items with your team.
+          Ask LexFlow about filings, deadlines, or track action items with your team. Citations appear like [Document#3].
         </p>
         {lastUpdated && (
           <p className="text-xs text-slate-400">

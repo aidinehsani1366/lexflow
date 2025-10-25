@@ -4,6 +4,8 @@ import { supabaseAdmin, getUserFromRequest } from "../../../../../lib/serverSupa
 const openaiClient = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
+const EMBEDDING_MODEL = "text-embedding-3-small";
+const MAX_CONTEXT_CHUNKS = 5;
 
 const jsonResponse = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -61,6 +63,55 @@ async function fetchMessages(caseId) {
   return data || [];
 }
 
+function cosineSimilarity(a = [], b = []) {
+  if (!a.length || !b.length) return 0;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (!normA || !normB) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function fetchChunkContext(caseId, questionEmbedding) {
+  const { data, error } = await supabaseAdmin
+    .from("document_chunks")
+    .select("chunk_index, content, embedding, case_documents!inner(file_name, case_id)")
+    .eq("case_documents.case_id", caseId)
+    .limit(200);
+
+  if (error) {
+    console.error("Failed to load chunks:", error);
+    return [];
+  }
+
+  if (!data?.length) return [];
+
+  return data
+    .map((row) => {
+      const embeddingArray = Array.isArray(row.embedding)
+        ? row.embedding
+        : Array.isArray(row.embedding?.data)
+        ? row.embedding.data
+        : row.embedding
+        ? Object.values(row.embedding)
+        : [];
+
+      return {
+        label: `${row.case_documents?.file_name || "Document"}#${row.chunk_index + 1}`,
+        content: row.content,
+        score: cosineSimilarity(questionEmbedding, embeddingArray),
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_CONTEXT_CHUNKS)
+    .filter((chunk) => chunk.score > 0);
+}
+
 export async function GET(req, { params }) {
   try {
     const user = await getUserFromRequest(req);
@@ -113,16 +164,40 @@ export async function POST(req, { params }) {
           content: msg.content,
         }));
 
+        let contextChunks = [];
+        try {
+          const embeddingResponse = await openaiClient.embeddings.create({
+            model: EMBEDDING_MODEL,
+            input: trimmedContent,
+          });
+          const questionEmbedding = embeddingResponse.data[0]?.embedding || [];
+          contextChunks = await fetchChunkContext(caseId, questionEmbedding);
+        } catch (embeddingError) {
+          console.error("Failed to build context chunks:", embeddingError);
+        }
+
+        const contextMessage = contextChunks.length
+          ? {
+              role: "system",
+              content: `Relevant document excerpts (cite using the bracketed labels):\n${contextChunks
+                .map((chunk) => `[${chunk.label}] ${chunk.content}`)
+                .join("\n\n")}`,
+            }
+          : null;
+
+        const completionMessages = [
+          {
+            role: "system",
+            content:
+              "You are LexFlow, an AI legal analyst. Provide concise, actionable answers without giving formal legal advice. When referencing documents, cite them using the provided labels in square brackets.",
+          },
+          ...(contextMessage ? [contextMessage] : []),
+          ...chatHistory,
+        ];
+
         const completion = await openaiClient.chat.completions.create({
           model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are LexFlow, an AI legal analyst. Provide concise, actionable answers without giving formal legal advice.",
-            },
-            ...chatHistory,
-          ],
+          messages: completionMessages,
         });
 
         aiContent =

@@ -14,7 +14,6 @@ const supabase = createClient(
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const CHUNK_CHAR_LIMIT = 1200;
-const MAX_CONTEXT_CHARS = 40000;
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 
 function chunkText(text) {

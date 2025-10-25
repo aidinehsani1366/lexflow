@@ -1,15 +1,19 @@
 "use client";
 import Link from "next/link";
 import UserMenu from "./UserMenu";
+import { usePlan } from "../lib/usePlan";
 
 const navItems = [
   { label: "Cases", href: "/dashboard" },
+  { label: "Billing", href: "/dashboard/billing" },
   { label: "Calendar", href: "#", soon: true },
   { label: "Insights", href: "#", soon: true },
   { label: "Settings", href: "#", soon: true },
 ];
 
 export default function DashboardLayout({ children }) {
+  const { plan, loading } = usePlan();
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex min-h-screen">
@@ -46,7 +50,7 @@ export default function DashboardLayout({ children }) {
         </aside>
         <div className="flex-1 flex flex-col">
           <header className="border-b border-slate-100 bg-white/80 backdrop-blur">
-            <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center justify-between px-6 py-4 gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-400">
                   LexFlow Dashboard
@@ -55,7 +59,22 @@ export default function DashboardLayout({ children }) {
                   Orchestrate every matter
                 </p>
               </div>
-              <UserMenu />
+              <div className="flex items-center gap-3">
+                {plan && !loading ? (
+                  <Link
+                    href="/dashboard/billing"
+                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:bg-slate-50"
+                  >
+                    {plan.plan === "solo" && "Solo"}
+                    {plan.plan === "team" && "Team"}
+                    {plan.plan === "firm" && "Firm"}
+                    {" "}plan
+                  </Link>
+                ) : (
+                  <div className="h-8 w-24 rounded-full bg-slate-200 animate-pulse" />
+                )}
+                <UserMenu />
+              </div>
             </div>
           </header>
           <main className="flex-1 px-6 py-8 bg-slate-50">{children}</main>

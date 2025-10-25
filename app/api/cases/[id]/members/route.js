@@ -1,4 +1,5 @@
 import { supabaseAdmin, getUserFromRequest } from "../../../../../lib/serverSupabase";
+import { ensureSubscription } from "../../../../../lib/serverSubscriptions";
 
 const jsonResponse = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -140,6 +141,26 @@ export async function POST(req, { params }) {
     const caseRow = await ensureCaseAccess(params.id, user.id);
     if (caseRow.user_id !== user.id) {
       return jsonResponse({ error: "Only case owners can invite members." }, 403);
+    }
+
+    const subscription = await ensureSubscription(caseRow.user_id);
+
+    const { count: memberCount, error: memberCountError } = await supabaseAdmin
+      .from("case_members")
+      .select("*", { count: "exact", head: true })
+      .eq("case_id", caseRow.id);
+
+    if (memberCountError) throw memberCountError;
+
+    const seatUsage = 1 + (memberCount || 0);
+    if (seatUsage >= subscription.seat_limit) {
+      return jsonResponse(
+        {
+          error:
+            "Seat limit reached. Remove a member or upgrade your plan on the billing page.",
+        },
+        403
+      );
     }
 
     const { email, role = "editor" } = await req.json();

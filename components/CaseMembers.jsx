@@ -1,6 +1,8 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { usePlan } from "../lib/usePlan";
 
 const roleOptions = [
   { value: "editor", label: "Editor • can upload & chat" },
@@ -8,6 +10,7 @@ const roleOptions = [
 ];
 
 export default function CaseMembers({ caseId }) {
+  const { plan, loading: planLoading, error: planError } = usePlan();
   const [owner, setOwner] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +111,13 @@ export default function CaseMembers({ caseId }) {
     }
   };
 
+  const seatLimit = plan?.seat_limit ?? 1;
+  const seatUsage = 1 + members.length;
+  const seatsRemaining = seatLimit - seatUsage;
+  const planName = plan?.plan || "solo";
+  const invitesBlocked =
+    planLoading || !plan || planName === "solo" || seatsRemaining <= 0;
+
   const renderMemberCard = (member, isOwnerCard = false) => (
     <div
       key={member.member_id || member.id}
@@ -162,6 +172,11 @@ export default function CaseMembers({ caseId }) {
           {error}
         </div>
       )}
+      {planError && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          {planError}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -183,38 +198,72 @@ export default function CaseMembers({ caseId }) {
       )}
 
       {isOwner && (
-        <form onSubmit={handleInvite} className="space-y-4 rounded-2xl border border-slate-100 p-4">
-          <p className="text-sm font-semibold text-slate-800">Invite teammate</p>
-          <input
-            type="email"
-            required
-            placeholder="colleague@firm.com"
-            value={invite.email}
-            onChange={(e) => setInvite((prev) => ({ ...prev, email: e.target.value }))}
-            className="w-full rounded-2xl border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-          />
-          <select
-            value={invite.role}
-            onChange={(e) => setInvite((prev) => ({ ...prev, role: e.target.value }))}
-            className="w-full rounded-2xl border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-          >
-            {roleOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            disabled={inviting}
-            className="w-full rounded-full bg-slate-900 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition disabled:opacity-60"
-          >
-            {inviting ? "Sending invite..." : "Invite member"}
-          </button>
-          <p className="text-xs text-slate-400">
-            Members must have a LexFlow account to accept. Viewer role launches read-only mode soon.
-          </p>
-        </form>
+        <div className="space-y-3 rounded-2xl border border-slate-100 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-800">Invite teammate</p>
+            <p className="text-xs text-slate-500">
+              Seats {Math.min(seatUsage, seatLimit)}/{seatLimit}
+            </p>
+          </div>
+
+          {planName === "solo" && !planLoading ? (
+            <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 text-sm text-indigo-800 space-y-2">
+              <p>
+                Collaboration requires the Team plan. Upgrade to invite associates, paralegals, and clients.
+              </p>
+              <Link
+                href="/dashboard/billing"
+                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white"
+              >
+                View plans →
+              </Link>
+            </div>
+          ) : seatsRemaining <= 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 space-y-2">
+              <p>
+                You’ve reached your seat limit. Remove a member or increase your plan to add more collaborators.
+              </p>
+              <Link
+                href="/dashboard/billing"
+                className="inline-flex items-center rounded-full border border-amber-300 px-4 py-2 text-xs font-semibold text-amber-800"
+              >
+                Manage billing →
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleInvite} className="space-y-4">
+              <input
+                type="email"
+                required
+                placeholder="colleague@firm.com"
+                value={invite.email}
+                onChange={(e) => setInvite((prev) => ({ ...prev, email: e.target.value }))}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              />
+              <select
+                value={invite.role}
+                onChange={(e) => setInvite((prev) => ({ ...prev, role: e.target.value }))}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              >
+                {roleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={inviting || invitesBlocked}
+                className="w-full rounded-full bg-slate-900 py-3 text-sm font-semibold text-white hover:-translate-y-0.5 transition disabled:opacity-60"
+              >
+                {inviting ? "Sending invite..." : "Invite member"}
+              </button>
+              <p className="text-xs text-slate-400">
+                Members must have a LexFlow account to accept. Viewer role launches read-only mode soon.
+              </p>
+            </form>
+          )}
+        </div>
       )}
     </div>
   );

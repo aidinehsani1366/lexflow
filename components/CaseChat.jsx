@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { usePlan } from "../lib/usePlan";
 
 const promptSuggestions = [
   {
@@ -18,6 +19,7 @@ const promptSuggestions = [
 ];
 
 export default function CaseChat({ caseId }) {
+  const { plan } = usePlan();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -136,6 +138,11 @@ export default function CaseChat({ caseId }) {
           </button>
         ))}
       </div>
+      {plan?.plan === "solo" && (
+        <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs text-indigo-800">
+          Solo plan includes limited AI prompts. Upgrade on the billing page for collaborative AI and higher limits.
+        </div>
+      )}
 
       <div className="rounded-lg border bg-slate-50 max-h-96 overflow-y-auto p-4 space-y-3">
         {loading ? (

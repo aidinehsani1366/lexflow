@@ -9,14 +9,26 @@ const jsonResponse = (payload, status = 200) =>
 async function getProfile(userId) {
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("role")
+    .select("role, firm_id")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
+
   if (error) {
-    console.error("Failed to load profile role", error);
-    return { role: "user" };
+    console.error("Failed to load profile", error);
+    throw new Error("Failed to load profile");
   }
-  return data || { role: "user" };
+
+  if (data) return data;
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("profiles")
+    .insert({ id: userId })
+    .select("role, firm_id")
+    .single();
+
+  if (insertError) throw new Error(insertError.message);
+
+  return inserted;
 }
 
 export async function GET(req) {
@@ -25,6 +37,7 @@ export async function GET(req) {
     if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const profile = await getProfile(user.id);
+    const isAdmin = profile.role === "admin";
 
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get("status");
@@ -34,8 +47,12 @@ export async function GET(req) {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (profile.role !== "admin") {
-      query = query.eq("assigned_to", user.id);
+    if (!isAdmin) {
+      const filters = [`assigned_to.eq.${user.id}`];
+      if (profile.firm_id) {
+        filters.push(`firm_id.eq.${profile.firm_id}`);
+      }
+      query = query.or(filters.join(","));
     }
 
     if (statusFilter) {
@@ -69,6 +86,7 @@ export async function POST(req) {
       summary: body?.summary || null,
       source: body?.source || "website",
       metadata: body?.metadata || null,
+      firm_id: body?.firm_id || null,
     };
 
     const { error } = await supabaseAdmin.from("leads").insert(payload);

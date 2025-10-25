@@ -2,8 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "../../../components/DashboardLayout";
 import { supabase } from "../../../lib/supabaseClient";
+import { useProfile } from "../../../lib/useProfile";
 
 const STATUS_OPTIONS = ["new", "contacted", "assigned", "retained", "closed"];
+const ROLE_LABELS = {
+  admin: "Super Admin",
+  firm_admin: "Firm Admin",
+  firm_staff: "Firm Staff",
+  user: "Staff",
+};
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState([]);
@@ -13,6 +20,37 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState(false);
   const [notes, setNotes] = useState("");
+  const [firms, setFirms] = useState([]);
+  const [allProfiles, setAllProfiles] = useState([]);
+  const { profile, loading: profileLoading, error: profileError } = useProfile();
+
+  const isSuperAdmin = profile?.role === "admin";
+
+  const fetchFirms = async (token) => {
+    try {
+      const res = await fetch("/api/admin/firms", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to load firms");
+      setFirms(payload.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchAllProfiles = async (token) => {
+    try {
+      const res = await fetch("/api/admin/profiles", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to load users");
+      setAllProfiles(payload.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     const fetchLeads = async () => {
@@ -22,6 +60,11 @@ export default function LeadsPage() {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) throw new Error("No auth token found");
+
+        if (isSuperAdmin) {
+          fetchFirms(token);
+          fetchAllProfiles(token);
+        }
 
         const url =
           statusFilter === "all"
@@ -44,9 +87,11 @@ export default function LeadsPage() {
         setLoading(false);
       }
     };
-    fetchLeads();
+    if (!profileLoading && profile) {
+      fetchLeads();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, profileLoading, profile]);
 
   const filteredLeads = useMemo(() => {
     if (statusFilter === "all") return leads;
@@ -88,8 +133,79 @@ export default function LeadsPage() {
     }
   };
 
+  const handleFirmAssign = async (firmId) => {
+    if (!selectedLead) return;
+    setUpdating(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("No auth token found");
+
+      const res = await fetch(`/api/leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ firm_id: firmId || null, referral_notes: notes }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to assign firm");
+      setLeads((prev) =>
+        prev.map((lead) => (lead.id === payload.data.id ? payload.data : lead))
+      );
+      setSelectedLead(payload.data);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleUserAssign = async (userId) => {
+    if (!selectedLead) return;
+    setUpdating(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("No auth token found");
+
+      const res = await fetch(`/api/leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ assigned_to: userId || null, referral_notes: notes }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to assign user");
+      setLeads((prev) =>
+        prev.map((lead) => (lead.id === payload.data.id ? payload.data : lead))
+      );
+      setSelectedLead(payload.data);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const firmOptions = firms.map((firm) => ({ value: firm.id, label: firm.name }));
+  const selectedFirmName = selectedLead
+    ? firms.find((firm) => firm.id === selectedLead.firm_id)?.name || "Unassigned"
+    : "";
+  const firmUsers = selectedLead
+    ? allProfiles.filter((p) => p.firm_id === selectedLead.firm_id)
+    : [];
+
   return (
     <DashboardLayout>
+      {profileError && (
+        <p className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          {profileError}
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <section className="space-y-4 rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
           <header className="flex items-center justify-between">
@@ -163,6 +279,9 @@ export default function LeadsPage() {
                     {selectedLead.email || "No email"} ·{" "}
                     {selectedLead.phone || "No phone"}
                   </p>
+                  <p className="text-xs text-slate-500">
+                    Firm: {selectedFirmName}
+                  </p>
                 </div>
                 <select
                   value={selectedLead.status}
@@ -198,6 +317,42 @@ export default function LeadsPage() {
                   </p>
                 </div>
               </div>
+
+              {isSuperAdmin && (
+                <div className="rounded-2xl border border-slate-100 bg-white p-4 space-y-3">
+                  <div>
+                    <p className="text-xs uppercase text-slate-400">Assign firm</p>
+                    <select
+                      value={selectedLead.firm_id || ""}
+                      onChange={(e) => handleFirmAssign(e.target.value || null)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    >
+                      <option value="">Unassigned</option>
+                      {firmOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-slate-400">Assign user</p>
+                    <select
+                      value={selectedLead.assigned_to || ""}
+                      onChange={(e) => handleUserAssign(e.target.value || null)}
+                      className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      disabled={!selectedLead.firm_id}
+                    >
+                      <option value="">Unassigned</option>
+                      {firmUsers.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.email || user.id} ({ROLE_LABELS[user.role] || user.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-2xl border border-slate-100 bg-white p-4 space-y-2">
                 <p className="text-xs uppercase text-slate-400">Referral notes</p>

@@ -9,14 +9,26 @@ const jsonResponse = (payload, status = 200) =>
 async function getProfile(userId) {
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("role")
+    .select("role, firm_id")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
+
   if (error) {
-    console.error("Failed to load profile role", error);
-    return { role: "user" };
+    console.error("Failed to load profile", error);
+    throw new Error("Failed to load profile");
   }
-  return data || { role: "user" };
+
+  if (data) return data;
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("profiles")
+    .insert({ id: userId })
+    .select("role, firm_id")
+    .single();
+
+  if (insertError) throw new Error(insertError.message);
+
+  return inserted;
 }
 
 async function getLead(id) {
@@ -24,12 +36,14 @@ async function getLead(id) {
     .from("leads")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
   if (error || !data) {
     const err = new Error("Lead not found");
     err.status = 404;
     throw err;
   }
+
   return data;
 }
 
@@ -39,20 +53,28 @@ export async function PATCH(req, { params }) {
     if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
     const profile = await getProfile(user.id);
+    const isAdmin = profile.role === "admin";
+
     const id = params.id;
     const lead = await getLead(id);
 
-    const isAdmin = profile.role === "admin";
-    const isOwner = lead.assigned_to === user.id;
-    if (!isAdmin && !isOwner) {
+    const sameFirm = profile.firm_id && lead.firm_id && profile.firm_id === lead.firm_id;
+    const canEdit =
+      isAdmin || lead.assigned_to === user.id || (profile.role === "firm_admin" && sameFirm);
+
+    if (!canEdit) {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
 
     const body = await req.json();
     const updates = {};
     if (body.status) updates.status = body.status;
-    if (body.assigned_to && isAdmin) updates.assigned_to = body.assigned_to;
     if (body.referral_notes !== undefined) updates.referral_notes = body.referral_notes;
+
+    if (isAdmin) {
+      if (body.assigned_to !== undefined) updates.assigned_to = body.assigned_to;
+      if (body.firm_id !== undefined) updates.firm_id = body.firm_id || null;
+    }
 
     if (Object.keys(updates).length === 0) {
       return jsonResponse({ error: "No valid fields to update." }, 400);

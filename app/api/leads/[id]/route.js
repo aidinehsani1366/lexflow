@@ -6,16 +6,52 @@ const jsonResponse = (payload, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+async function getProfile(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (error) {
+    console.error("Failed to load profile role", error);
+    return { role: "user" };
+  }
+  return data || { role: "user" };
+}
+
+async function getLead(id) {
+  const { data, error } = await supabaseAdmin
+    .from("leads")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) {
+    const err = new Error("Lead not found");
+    err.status = 404;
+    throw err;
+  }
+  return data;
+}
+
 export async function PATCH(req, { params }) {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
+    const profile = await getProfile(user.id);
     const id = params.id;
+    const lead = await getLead(id);
+
+    const isAdmin = profile.role === "admin";
+    const isOwner = lead.assigned_to === user.id;
+    if (!isAdmin && !isOwner) {
+      return jsonResponse({ error: "Forbidden" }, 403);
+    }
+
     const body = await req.json();
     const updates = {};
     if (body.status) updates.status = body.status;
-    if (body.assigned_to) updates.assigned_to = body.assigned_to;
+    if (body.assigned_to && isAdmin) updates.assigned_to = body.assigned_to;
     if (body.referral_notes !== undefined) updates.referral_notes = body.referral_notes;
 
     if (Object.keys(updates).length === 0) {

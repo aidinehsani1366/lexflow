@@ -6,15 +6,38 @@ const jsonResponse = (payload, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+async function getProfile(userId) {
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (error) {
+    console.error("Failed to load profile role", error);
+    return { role: "user" };
+  }
+  return data || { role: "user" };
+}
+
 export async function GET(req) {
   try {
     const user = await getUserFromRequest(req);
     if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
+    const profile = await getProfile(user.id);
+
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get("status");
 
-    let query = supabaseAdmin.from("leads").select("*").order("created_at", { ascending: false });
+    let query = supabaseAdmin
+      .from("leads")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (profile.role !== "admin") {
+      query = query.eq("assigned_to", user.id);
+    }
+
     if (statusFilter) {
       query = query.eq("status", statusFilter);
     }

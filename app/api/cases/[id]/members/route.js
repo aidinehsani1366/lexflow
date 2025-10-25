@@ -145,14 +145,27 @@ export async function POST(req, { params }) {
 
     const subscription = await ensureSubscription(caseRow.user_id);
 
-    const { count: memberCount, error: memberCountError } = await supabaseAdmin
-      .from("case_members")
-      .select("*", { count: "exact", head: true })
-      .eq("case_id", caseRow.id);
+    const { data: ownerCases, error: ownerCasesError } = await supabaseAdmin
+      .from("cases")
+      .select("id")
+      .eq("user_id", caseRow.user_id);
 
-    if (memberCountError) throw memberCountError;
+    if (ownerCasesError) throw ownerCasesError;
 
-    const seatUsage = 1 + (memberCount || 0);
+    const ownerCaseIds = (ownerCases || []).map((row) => row.id);
+
+    let collaboratorCount = 0;
+    if (ownerCaseIds.length > 0) {
+      const { count, error: memberCountError } = await supabaseAdmin
+        .from("case_members")
+        .select("*", { count: "exact", head: true })
+        .in("case_id", ownerCaseIds);
+
+      if (memberCountError) throw memberCountError;
+      collaboratorCount = count || 0;
+    }
+
+    const seatUsage = 1 + collaboratorCount;
     if (seatUsage >= subscription.seat_limit) {
       return jsonResponse(
         {

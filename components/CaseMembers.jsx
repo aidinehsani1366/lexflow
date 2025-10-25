@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { usePlan } from "../lib/usePlan";
 
@@ -112,7 +112,7 @@ export default function CaseMembers({ caseId }) {
   };
 
   const seatLimit = plan?.seat_limit ?? 1;
-  const seatUsage = 1 + members.length;
+  const seatUsage = useMemo(() => 1 + members.length, [members.length]);
   const seatsRemaining = seatLimit - seatUsage;
   const planName = plan?.plan || "solo";
   const invitesBlocked =
@@ -165,6 +165,11 @@ export default function CaseMembers({ caseId }) {
         <p className="text-sm text-slate-500">
           Invite teammates to collaborate. Editors can upload docs & use AI, viewers get read-only access.
         </p>
+        {plan && (
+          <p className="text-xs text-slate-400">
+            Seats {Math.max(seatUsage, 0)} / {seatLimit}
+          </p>
+        )}
       </header>
 
       {error && (

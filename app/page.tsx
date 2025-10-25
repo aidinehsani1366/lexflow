@@ -46,13 +46,18 @@ const testimonials = [
 ];
 
 export default function LexFlowLanding() {
-  const handleCheckout = async (priceId: string) => {
+  const handleCheckout = async (plan: "solo" | "team" | "firm") => {
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ plan }),
       });
+      if (res.status === 401) {
+        alert("Please sign in through the dashboard to manage billing.");
+        window.location.href = "/dashboard";
+        return;
+      }
       if (!res.ok) {
         const err = await res.text();
         alert("Checkout failed: " + err);
@@ -302,34 +307,34 @@ export default function LexFlowLanding() {
               </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
-              {[
-                {
-                  name: "Solo",
-                  price: "$49",
-                  id: "price_1SIJnOE2OBuEBsraH7hBg3bP",
-                  description: "Independent lawyers managing a focused docket.",
-                  perks: ["Unlimited cases", "Deadline assistant", "AI summaries"],
-                },
-                {
-                  name: "Team",
-                  price: "$149",
-                  highlight: true,
-                  id: "price_1SIK0JE2OBuEBsraQMNdGgtJ",
-                  description: "Firms with partners, associates, and paralegals.",
-                  perks: [
-                    "Everything in Solo",
-                    "AI compliance checklists",
-                    "Shared calendar + exports",
-                  ],
-                },
-                {
-                  name: "Firm",
-                  price: "$399",
-                  id: "price_1SIK0oE2OBuEBsraw7cKEY2G",
-                  description: "Full-service firms needing enterprise controls.",
-                  perks: ["SSO + granular roles", "Priority onboarding", "Dedicated CSM"],
-                },
-              ].map((plan) => (
+          {[
+            {
+              name: "Solo",
+              price: "$49",
+              plan: "solo" as const,
+              description: "Independent lawyers managing a focused docket.",
+              perks: ["Unlimited cases", "Deadline assistant", "AI summaries"],
+            },
+            {
+              name: "Team",
+              price: "$149",
+              highlight: true,
+              plan: "team" as const,
+              description: "Firms with partners, associates, and paralegals.",
+              perks: [
+                "Everything in Solo",
+                "AI compliance checklists",
+                "Shared calendar + exports",
+              ],
+            },
+            {
+              name: "Firm",
+              price: "$399",
+              plan: "firm" as const,
+              description: "Full-service firms needing enterprise controls.",
+              perks: ["SSO + granular roles", "Priority onboarding", "Dedicated CSM"],
+            },
+          ].map((plan) => (
                 <div
                   key={plan.name}
                   className={`rounded-2xl border p-6 shadow-sm flex flex-col gap-4 ${
@@ -359,7 +364,7 @@ export default function LexFlowLanding() {
                     ))}
                   </ul>
                   <button
-                    onClick={() => handleCheckout(plan.id)}
+                    onClick={() => handleCheckout(plan.plan)}
                     className={`mt-auto rounded-full px-5 py-3 text-sm font-semibold transition ${
                       plan.highlight
                         ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"

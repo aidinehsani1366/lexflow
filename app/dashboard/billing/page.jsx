@@ -42,22 +42,23 @@ const PLANS = [
 
 export default function BillingPage() {
   const { plan, loading, error, refresh } = usePlan();
-  const [updatingPlan, setUpdatingPlan] = useState("");
+  const [checkoutPlan, setCheckoutPlan] = useState("");
   const [portalLoading, setPortalLoading] = useState(false);
   const [actionError, setActionError] = useState("");
 
   const activePlanId = plan?.plan || "solo";
+  const planOrder = { solo: 0, team: 1, firm: 2 };
+  const currentRank = planOrder[activePlanId] ?? 0;
 
-  const handlePlanChange = async (planId) => {
-    if (planId === activePlanId) return;
-    setUpdatingPlan(planId);
+  const startCheckout = async (planId) => {
+    setCheckoutPlan(planId);
     setActionError("");
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("No auth token found");
 
-      const res = await fetch("/api/billing/plan", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,12 +67,12 @@ export default function BillingPage() {
         body: JSON.stringify({ plan: planId }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Plan update failed");
-      refresh();
+      if (!res.ok) throw new Error(payload.error || "Checkout failed");
+      window.location.href = payload.url;
     } catch (err) {
       setActionError(err.message);
     } finally {
-      setUpdatingPlan("");
+      setCheckoutPlan("");
     }
   };
 
@@ -138,6 +139,7 @@ export default function BillingPage() {
         <div className="grid gap-4 md:grid-cols-3">
           {PLANS.map((option) => {
             const isActive = option.id === activePlanId;
+            const targetRank = planOrder[option.id] ?? 0;
             return (
               <div
                 key={option.id}
@@ -161,21 +163,30 @@ export default function BillingPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  onClick={() => handlePlanChange(option.id)}
-                  disabled={isActive || updatingPlan === option.id}
-                  className={`w-full rounded-full px-4 py-2 text-sm font-semibold ${
-                    isActive
-                      ? "bg-slate-900 text-white"
-                      : "border border-slate-200 text-slate-700 hover:bg-white"
-                  } disabled:opacity-60`}
-                >
-                  {isActive
-                    ? "Current plan"
-                    : updatingPlan === option.id
-                    ? "Updating..."
-                    : "Switch to this plan"}
-                </button>
+                {isActive ? (
+                  <button
+                    className="w-full rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                    disabled
+                  >
+                    Current plan
+                  </button>
+                ) : targetRank > currentRank ? (
+                  <button
+                    onClick={() => startCheckout(option.id)}
+                    disabled={checkoutPlan === option.id}
+                    className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
+                  >
+                    {checkoutPlan === option.id ? "Redirecting…" : "Upgrade via Stripe"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePortal}
+                    disabled={portalLoading}
+                    className="w-full rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white disabled:opacity-60"
+                  >
+                    {portalLoading ? "Opening…" : "Manage in Stripe"}
+                  </button>
+                )}
               </div>
             );
           })}

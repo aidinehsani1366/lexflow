@@ -1,4 +1,5 @@
 "use client";
+import { useState, FormEvent } from "react";
 import Link from "next/link";
 
 const stats = [
@@ -46,6 +47,13 @@ const testimonials = [
 ];
 
 export default function LexFlowLanding() {
+  const [leadForm, setLeadForm] = useState({
+    contact_name: "",
+    email: "",
+    case_type: "",
+    summary: "",
+  });
+  const [leadMeta, setLeadMeta] = useState({ submitting: false, message: "" });
   const handleCheckout = async (plan: "solo" | "team" | "firm") => {
     try {
       const res = await fetch("/api/billing/checkout", {
@@ -68,6 +76,33 @@ export default function LexFlowLanding() {
     } catch (e) {
       console.error(e);
       alert("Network error creating checkout session.");
+    }
+  };
+
+  const handleLeadSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLeadMeta({ submitting: true, message: "" });
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...leadForm,
+          source: "landing",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+      setLeadForm({ contact_name: "", email: "", case_type: "", summary: "" });
+      setLeadMeta({ submitting: false, message: "Thanks! A partner attorney will reach out shortly." });
+    } catch (err) {
+      setLeadMeta({
+        submitting: false,
+        message:
+          err instanceof Error ? err.message : "Submission failed. Please try again.",
+      });
     }
   };
 
@@ -190,7 +225,72 @@ export default function LexFlowLanding() {
                 </div>
               </div>
             </div>
-          </section>
+        </section>
+
+        <section id="intake" className="py-16 grid gap-8 lg:grid-cols-2 items-center">
+          <div className="space-y-4">
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Need legal help?</p>
+            <h2 className="text-3xl font-semibold text-slate-900">
+              Tell LexFlow about your matter and we’ll route it to a vetted firm.
+            </h2>
+            <p className="text-slate-600">
+              Describe your issue and we’ll connect you with the best-fit attorney from our network.
+              Urgent matters are flagged for priority outreach.
+            </p>
+          </div>
+          <form onSubmit={handleLeadSubmit} className="glass-panel p-8 space-y-4">
+            <div>
+              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Full name</label>
+              <input
+                required
+                value={leadForm.contact_name}
+                onChange={(e) => setLeadForm((prev) => ({ ...prev, contact_name: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                placeholder="Jane Doe"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Email</label>
+              <input
+                type="email"
+                value={leadForm.email}
+                onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Case type</label>
+              <input
+                value={leadForm.case_type}
+                onChange={(e) => setLeadForm((prev) => ({ ...prev, case_type: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                placeholder="Employment, Personal injury, etc."
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Summary</label>
+              <textarea
+                required
+                rows={4}
+                value={leadForm.summary}
+                onChange={(e) => setLeadForm((prev) => ({ ...prev, summary: e.target.value }))}
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                placeholder="Briefly describe your situation..."
+              />
+            </div>
+            {leadMeta.message && (
+              <p className="text-sm text-slate-600">{leadMeta.message}</p>
+            )}
+            <button
+              type="submit"
+              disabled={leadMeta.submitting}
+              className="w-full rounded-full bg-slate-900 py-3 font-semibold text-white hover:-translate-y-0.5 transition disabled:opacity-60"
+            >
+              {leadMeta.submitting ? "Submitting..." : "Send to LexFlow"}
+            </button>
+          </form>
+        </section>
 
           {/* Stats */}
           <section className="grid gap-6 md:grid-cols-3">

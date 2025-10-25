@@ -5,6 +5,7 @@ import { usePlan } from "../lib/usePlan";
 
 const navItems = [
   { label: "Cases", href: "/dashboard" },
+  { label: "Leads", href: "/dashboard/leads" },
   { label: "Billing", href: "/dashboard/billing" },
   { label: "Calendar", href: "#", soon: true },
   { label: "Insights", href: "#", soon: true },

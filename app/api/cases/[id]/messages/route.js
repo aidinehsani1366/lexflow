@@ -50,11 +50,29 @@ async function ensureCaseAccess(caseId, userId) {
   return caseRow;
 }
 
-async function fetchMessages(caseId) {
+async function ensureSession(caseId, sessionId) {
+  const { data, error } = await supabaseAdmin
+    .from("case_sessions")
+    .select("id")
+    .eq("id", sessionId)
+    .eq("case_id", caseId)
+    .single();
+
+  if (error || !data) {
+    const err = new Error("Session not found");
+    err.status = 404;
+    throw err;
+  }
+
+  return data;
+}
+
+async function fetchMessages(caseId, sessionId) {
   const { data, error } = await supabaseAdmin
     .from("case_messages")
     .select("*")
     .eq("case_id", caseId)
+    .eq("session_id", sessionId)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -119,8 +137,13 @@ export async function GET(req, { params }) {
 
     const caseId = params.id;
     await ensureCaseAccess(caseId, user.id);
+    const sessionId = new URL(req.url).searchParams.get("sessionId");
+    if (!sessionId) {
+      return jsonResponse({ error: "sessionId query param is required" }, 400);
+    }
+    await ensureSession(caseId, sessionId);
 
-    const messages = await fetchMessages(caseId);
+    const messages = await fetchMessages(caseId, sessionId);
     return jsonResponse({ data: messages });
   } catch (err) {
     console.error(`GET /api/cases/${params.id}/messages error:`, err);
@@ -136,6 +159,11 @@ export async function POST(req, { params }) {
 
     const caseId = params.id;
     await ensureCaseAccess(caseId, user.id);
+    const sessionId = new URL(req.url).searchParams.get("sessionId");
+    if (!sessionId) {
+      return jsonResponse({ error: "sessionId query param is required" }, 400);
+    }
+    await ensureSession(caseId, sessionId);
 
     const { content } = await req.json();
     const trimmedContent = content?.trim();
@@ -147,6 +175,8 @@ export async function POST(req, { params }) {
       .from("case_messages")
       .insert({
         case_id: caseId,
+        session_id: sessionId,
+        user_id: user.id,
         sender: "user",
         content: trimmedContent,
       })
@@ -158,7 +188,7 @@ export async function POST(req, { params }) {
     let aiContent = "I received your message and will analyze it shortly.";
     if (openaiClient) {
       try {
-        const existingMessages = await fetchMessages(caseId);
+        const existingMessages = await fetchMessages(caseId, sessionId);
         const chatHistory = existingMessages.map((msg) => ({
           role: msg.sender === "user" ? "user" : "assistant",
           content: msg.content,
@@ -215,6 +245,7 @@ export async function POST(req, { params }) {
       .from("case_messages")
       .insert({
         case_id: caseId,
+        session_id: sessionId,
         sender: "ai",
         content: aiContent,
       })
@@ -223,7 +254,7 @@ export async function POST(req, { params }) {
 
     if (aiMsgError) throw new Error(aiMsgError.message);
 
-    const messages = await fetchMessages(caseId);
+    const messages = await fetchMessages(caseId, sessionId);
     return jsonResponse({ data: messages });
   } catch (err) {
     console.error(`POST /api/cases/${params.id}/messages error:`, err);

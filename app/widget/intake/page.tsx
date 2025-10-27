@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type LeadFormState = {
@@ -23,7 +23,25 @@ const EMPTY_FORM: LeadFormState = {
   consent: false,
 };
 
-export default function PartnerIntakeWidget() {
+export default function PartnerIntakeWidgetPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 py-6">
+          <div className="mx-auto max-w-xl px-4">
+            <div className="rounded-2xl border border-slate-100 bg-white/95 p-6 shadow-xl text-center text-sm text-slate-500">
+              Loading intake widget…
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <PartnerIntakeWidgetInner />
+    </Suspense>
+  );
+}
+
+function PartnerIntakeWidgetInner() {
   const searchParams = useSearchParams();
   const firmId = searchParams.get("firm") || "";
   const partnerName = searchParams.get("partnerName") || "";

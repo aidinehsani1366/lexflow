@@ -21,8 +21,10 @@ export default function CaseOverview({ caseData }) {
         <p className="text-xs uppercase tracking-[0.4em] text-white/60">
           Case title
         </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">
-          {caseData.title || "Untitled case"}
+        <h1 className="mt-4 text-3xl font-semibold leading-tight text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.55)]">
+          <span className="inline-flex rounded-xl bg-black/35 px-4 py-1 text-white backdrop-blur-sm">
+            {caseData.title || "Untitled case"}
+          </span>
         </h1>
         <p className="mt-3 text-white/75">
           High-level summary, docket notes, and upcoming automations will appear here.

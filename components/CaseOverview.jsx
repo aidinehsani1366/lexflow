@@ -17,12 +17,14 @@ export default function CaseOverview({ caseData }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-slate-900 text-white p-8 shadow-lg">
+      <div className="rounded-3xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-900 p-8 text-white shadow-lg">
         <p className="text-xs uppercase tracking-[0.4em] text-white/60">
           Case title
         </p>
-        <h1 className="mt-3 text-3xl font-semibold">{caseData.title}</h1>
-        <p className="mt-3 text-white/70">
+        <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">
+          {caseData.title || "Untitled case"}
+        </h1>
+        <p className="mt-3 text-white/75">
           High-level summary, docket notes, and upcoming automations will appear here.
         </p>
       </div>

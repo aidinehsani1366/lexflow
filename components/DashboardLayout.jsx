@@ -7,9 +7,9 @@ import { useProfile } from "../lib/useProfile";
 const baseNavItems = [
   { label: "Cases", href: "/dashboard" },
   { label: "Leads", href: "/dashboard/leads" },
-  { label: "Billing", href: "/dashboard/billing" },
-  { label: "Calendar", href: "#", soon: true },
+  { label: "Calendar", href: "/dashboard/calendar" },
   { label: "Insights", href: "/dashboard/insights" },
+  { label: "Billing", href: "/dashboard/billing" },
   { label: "Settings", href: "/dashboard/settings/roles" },
 ];
 

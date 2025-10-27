@@ -8,6 +8,7 @@ import CaseOverview from "../../../../components/CaseOverview";
 import CaseDocuments from "../../../../components/CaseDocuments";
 import CaseChat from "../../../../components/CaseChat";
 import CaseMembers from "../../../../components/CaseMembers";
+import CaseCalendar from "../../../../components/CaseCalendar";
 
 export default function CaseWorkspace({ params }) {
   const router = useRouter();
@@ -62,6 +63,8 @@ export default function CaseWorkspace({ params }) {
     switch (activeTab) {
       case "documents":
         return <CaseDocuments caseId={caseData?.id} />;
+      case "calendar":
+        return <CaseCalendar caseId={caseData?.id} />;
       case "ai":
         return <CaseChat caseId={caseData?.id} />;
       case "members":

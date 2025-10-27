@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Partner Intake Widget Documentation",
   description:
     "Learn how to embed the LexFlowLegal partner intake widget, capture compliant leads, and route referral revenue in minutes.",

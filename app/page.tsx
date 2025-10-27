@@ -15,14 +15,14 @@ const features = [
       "Centralize pleadings, court dates, and reminders with jurisdiction-aware templates.",
   },
   {
-    title: "AI compliance workspace",
+    title: "Trust-but-verify intake",
     description:
-      "Upload a brief and instantly receive checklists, risk flags, and follow-up prompts.",
+      "Consent text, IP, and audit-ready history are captured for every public and partner submission.",
   },
   {
-    title: "Collaboration canvas",
+    title: "Partner revenue console",
     description:
-      "Partners, associates, and paralegals work in one secure case profile with audit trails.",
+      "Embed-ready widgets, referral fee tracking, and dashboards keep every firm accountable.",
   },
 ];
 
@@ -50,8 +50,11 @@ export default function LexFlowLanding() {
   const [leadForm, setLeadForm] = useState({
     contact_name: "",
     email: "",
+    phone: "",
     case_type: "",
+    jurisdiction: "",
     summary: "",
+    consent: false,
   });
   const [leadMeta, setLeadMeta] = useState({ submitting: false, message: "" });
   const handleCheckout = async (plan: "solo" | "team" | "firm") => {
@@ -81,6 +84,13 @@ export default function LexFlowLanding() {
 
   const handleLeadSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!leadForm.consent) {
+      setLeadMeta({
+        submitting: false,
+        message: "Please confirm consent so we can route your inquiry.",
+      });
+      return;
+    }
     setLeadMeta({ submitting: true, message: "" });
     try {
       const res = await fetch("/api/leads", {
@@ -89,13 +99,24 @@ export default function LexFlowLanding() {
         body: JSON.stringify({
           ...leadForm,
           source: "landing",
+          consent: leadForm.consent,
+          consent_text:
+            "I agree that LexFlow and partner law firms may contact me about my inquiry.",
         }),
       });
       if (!res.ok) {
         const err = await res.text();
         throw new Error(err);
       }
-      setLeadForm({ contact_name: "", email: "", case_type: "", summary: "" });
+      setLeadForm({
+        contact_name: "",
+        email: "",
+        phone: "",
+        case_type: "",
+        jurisdiction: "",
+        summary: "",
+        consent: false,
+      });
       setLeadMeta({ submitting: false, message: "Thanks! A partner attorney will reach out shortly." });
     } catch (err) {
       setLeadMeta({
@@ -158,7 +179,7 @@ export default function LexFlowLanding() {
               <p className="text-lg text-slate-600">
                 LexFlow translates documents into action plans, keeps every case
                 organized, and gives your team a modern control center for
-                litigation, compliance, and advisory matters.
+                litigation, compliance, and partner revenue tracking.
               </p>
               <div className="flex flex-wrap gap-4">
                 <a
@@ -172,6 +193,12 @@ export default function LexFlowLanding() {
                   className="px-6 py-3 rounded-full border border-slate-200 text-slate-800 hover:bg-white transition"
                 >
                   See pricing
+                </a>
+                <a
+                  href="/dashboard/insights"
+                  className="px-6 py-3 rounded-full border border-indigo-100 text-indigo-600 hover:bg-indigo-50 transition"
+                >
+                  View analytics demo
                 </a>
               </div>
               <p className="text-sm text-slate-500">
@@ -239,25 +266,51 @@ export default function LexFlowLanding() {
             </p>
           </div>
           <form onSubmit={handleLeadSubmit} className="glass-panel p-8 space-y-4">
-            <div>
-              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Full name</label>
-              <input
-                required
-                value={leadForm.contact_name}
-                onChange={(e) => setLeadForm((prev) => ({ ...prev, contact_name: e.target.value }))}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                placeholder="Jane Doe"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Email</label>
-              <input
-                type="email"
-                value={leadForm.email}
-                onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                placeholder="you@example.com"
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Full name</label>
+                <input
+                  required
+                  value={leadForm.contact_name}
+                  onChange={(e) =>
+                    setLeadForm((prev) => ({ ...prev, contact_name: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={leadForm.email}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Phone</label>
+                <input
+                  type="tel"
+                  value={leadForm.phone}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="(415) 555-1234"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">
+                  Jurisdiction
+                </label>
+                <input
+                  value={leadForm.jurisdiction}
+                  onChange={(e) => setLeadForm((prev) => ({ ...prev, jurisdiction: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="State or agency"
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs text-slate-500 uppercase tracking-[0.3em]">Case type</label>
@@ -279,12 +332,33 @@ export default function LexFlowLanding() {
                 placeholder="Briefly describe your situation..."
               />
             </div>
+            <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                checked={leadForm.consent}
+                onChange={(e) =>
+                  setLeadForm((prev) => ({
+                    ...prev,
+                    consent: e.target.checked,
+                  }))
+                }
+                required
+              />
+              <span>
+                I agree that LexFlow and partner law firms may contact me by phone or email about my
+                inquiry. I understand my IP address and timestamp are logged for compliance.
+              </span>
+            </label>
+            <p className="text-xs text-slate-500">
+              Consent, timestamp, and IP are logged for attorney advertising compliance.
+            </p>
             {leadMeta.message && (
               <p className="text-sm text-slate-600">{leadMeta.message}</p>
             )}
             <button
               type="submit"
-              disabled={leadMeta.submitting}
+              disabled={leadMeta.submitting || !leadForm.consent}
               className="w-full rounded-full bg-slate-900 py-3 font-semibold text-white hover:-translate-y-0.5 transition disabled:opacity-60"
             >
               {leadMeta.submitting ? "Submitting..." : "Send to LexFlow"}
@@ -314,8 +388,8 @@ export default function LexFlowLanding() {
                 Product pillars
               </p>
               <h2 className="text-3xl font-semibold text-slate-900 mt-3">
-                Built for boutique and mid-size firms that need clarity without
-                enterprise bloat.
+                Legal intake software built for boutique and mid-size firms that
+                need clarity without enterprise bloat.
               </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
@@ -335,6 +409,47 @@ export default function LexFlowLanding() {
                   </p>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* Partner ops */}
+          <section className="py-16 grid gap-8 lg:grid-cols-2 items-center">
+            <div className="space-y-4">
+              <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Partner network ops</p>
+              <h2 className="text-3xl font-semibold text-slate-900">
+                Give referral firms an embed-ready widget, audit trail, and revenue share ledger.
+              </h2>
+              <p className="text-slate-600">
+                Drop a single script on any partner site to capture compliant intake. Every submission
+                is auto-tagged, logged in the timeline, and tied to referral fees so payouts never
+                slip.
+              </p>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li>- &lt;script&gt; widget auto-fills firm metadata + branding.</li>
+                <li>- Lead history records consent, actor, and every status change.</li>
+                <li>- Referral fees track due dates, paid status, and revenue per firm.</li>
+              </ul>
+              <a
+                href="/dashboard/settings/roles"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
+              >
+                Configure partner access →
+              </a>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-100 bg-white/90 p-6 shadow-sm">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Live audit trail</p>
+                <ul className="mt-3 space-y-3 text-sm text-slate-700">
+                  <li>Intake submitted · partner: Redwood Legal</li>
+                  <li>Status updated · contacted → retained · Priya Menon</li>
+                  <li>Referral fee logged · $3,500 due Feb 15</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white/90 p-6 shadow-sm">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Insights snapshot</p>
+                <p className="text-3xl font-semibold text-slate-900">72%</p>
+                <p className="text-sm text-slate-500">retention for partner-tagged leads this month</p>
+              </div>
             </div>
           </section>
 

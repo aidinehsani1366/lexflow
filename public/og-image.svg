@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <g fill="#ffffff" font-family="Inter, Arial, sans-serif">
+    <text x="80" y="240" font-size="64" font-weight="600">LexFlowLegal</text>
+    <text x="80" y="320" font-size="38" opacity="0.88">Legal intake &amp; referral revenue OS</text>
+    <text x="80" y="400" font-size="28" opacity="0.8">Compliant partner widgets · Audit trails · Payout tracking</text>
+  </g>
+</svg>

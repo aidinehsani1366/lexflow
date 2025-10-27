@@ -88,6 +88,30 @@ export async function PATCH(req, { params }) {
       .single();
 
     if (error) throw error;
+
+    const changes = [];
+    if (updates.status && updates.status !== lead.status) {
+      changes.push({ field: "status", from: lead.status, to: updates.status });
+    }
+    if (updates.assigned_to !== undefined && updates.assigned_to !== lead.assigned_to) {
+      changes.push({ field: "assigned_to", from: lead.assigned_to, to: updates.assigned_to });
+    }
+    if (updates.firm_id !== undefined && updates.firm_id !== lead.firm_id) {
+      changes.push({ field: "firm_id", from: lead.firm_id, to: updates.firm_id });
+    }
+    if (updates.referral_notes !== undefined && updates.referral_notes !== lead.referral_notes) {
+      changes.push({ field: "referral_notes" });
+    }
+
+    if (changes.length > 0) {
+      await supabaseAdmin.from("lead_events").insert({
+        lead_id: data.id,
+        actor_id: user.id,
+        event_type: "lead_updated",
+        details: { changes },
+      });
+    }
+
     return jsonResponse({ data });
   } catch (err) {
     console.error(`PATCH /api/leads/${params.id} error:`, err);

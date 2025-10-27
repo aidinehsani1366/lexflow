@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import DashboardLayout from "../../../../components/DashboardLayout";
 import { supabase } from "../../../../lib/supabaseClient";
@@ -19,6 +20,8 @@ export default function RolesPage() {
   const [firmForm, setFirmForm] = useState({ name: "", contact_email: "" });
   const [firmMessage, setFirmMessage] = useState("");
   const [firmSubmitting, setFirmSubmitting] = useState(false);
+  const [embedOrigin, setEmbedOrigin] = useState("");
+  const [copiedFirmId, setCopiedFirmId] = useState("");
   const { profile, loading: profileLoading } = useProfile();
   const isSuperAdmin = profile?.role === "admin";
 
@@ -67,6 +70,12 @@ export default function RolesPage() {
     if (isSuperAdmin) fetchFirms();
   }, [isSuperAdmin]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setEmbedOrigin(window.location.origin);
+    }
+  }, []);
+
   const handleFirmSubmit = async (e) => {
     e.preventDefault();
     setFirmSubmitting(true);
@@ -93,6 +102,25 @@ export default function RolesPage() {
       setFirmMessage(err.message);
     } finally {
       setFirmSubmitting(false);
+    }
+  };
+
+  const buildSnippet = (firm) => {
+    const base = embedOrigin || "https://your-lexflow-domain.com";
+    return `<script async src="${base}/partner-intake.js" data-firm="${firm.id}" data-partner-name="${firm.name}" data-height="640"></script>`;
+  };
+
+  const handleCopySnippet = async (firm) => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) {
+      alert("Clipboard access unavailable in this browser.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(buildSnippet(firm));
+      setCopiedFirmId(firm.id);
+      setTimeout(() => setCopiedFirmId(""), 2000);
+    } catch (err) {
+      console.error("Failed to copy snippet", err);
     }
   };
 
@@ -145,6 +173,12 @@ export default function RolesPage() {
               <p className="text-sm text-slate-600">
                 Add partner firms so their users can be assigned leads.
               </p>
+              <Link
+                href="/docs/partner-widget"
+                className="text-xs font-semibold text-indigo-600 underline"
+              >
+                View widget documentation →
+              </Link>
             </div>
             <form className="space-y-3" onSubmit={handleFirmSubmit}>
               <input
@@ -173,15 +207,50 @@ export default function RolesPage() {
                 {firmSubmitting ? "Adding..." : "Add firm"}
               </button>
             </form>
-            {firms.length > 0 && (
-              <ul className="space-y-2 text-sm text-slate-600">
-                {firms.map((firm) => (
-                  <li key={firm.id} className="rounded-xl border border-slate-100 px-3 py-2">
-                    <p className="font-semibold text-slate-800">{firm.name}</p>
-                    <p className="text-xs text-slate-400">{firm.contact_email || ""}</p>
-                  </li>
-                ))}
-              </ul>
+            {firms.length > 0 ? (
+              <div className="space-y-3 text-sm text-slate-600">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Embed widget</p>
+                <p className="text-xs text-slate-500">
+                  Paste this script onto partner sites. It renders a secure LexFlow intake form and
+                  auto-tags submissions with the firm.
+                </p>
+                <ul className="space-y-2">
+                  {firms.map((firm) => (
+                    <li key={firm.id} className="rounded-xl border border-slate-100 px-3 py-2 space-y-2">
+                      <div>
+                        <p className="font-semibold text-slate-800">{firm.name}</p>
+                        <p className="text-xs text-slate-400">{firm.contact_email || "No contact listed"}</p>
+                      </div>
+                      <pre className="overflow-x-auto rounded-lg bg-slate-900/90 px-3 py-2 text-[11px] text-slate-100">
+                        {buildSnippet(firm)}
+                      </pre>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCopySnippet(firm)}
+                          className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                          {copiedFirmId === firm.id ? "Copied!" : "Copy snippet"}
+                        </button>
+                        <a
+                          href={`/widget/intake?firm=${firm.id}&partnerName=${encodeURIComponent(
+                            firm.name
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                        >
+                          Open test form
+                        </a>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500">
+                Add a firm to generate a white-labeled intake widget snippet.
+              </p>
             )}
           </section>
         )}

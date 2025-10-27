@@ -2,18 +2,24 @@
 import Link from "next/link";
 import UserMenu from "./UserMenu";
 import { usePlan } from "../lib/usePlan";
+import { useProfile } from "../lib/useProfile";
 
-const navItems = [
+const baseNavItems = [
   { label: "Cases", href: "/dashboard" },
   { label: "Leads", href: "/dashboard/leads" },
   { label: "Billing", href: "/dashboard/billing" },
   { label: "Calendar", href: "#", soon: true },
-  { label: "Insights", href: "#", soon: true },
-  { label: "Settings", href: "#", soon: true },
+  { label: "Insights", href: "/dashboard/insights" },
+  { label: "Settings", href: "/dashboard/settings/roles" },
 ];
 
 export default function DashboardLayout({ children }) {
   const { plan, loading } = usePlan();
+  const { profile } = useProfile();
+
+  const navItems = profile?.role === "admin"
+    ? [...baseNavItems, { label: "Security", href: "/dashboard/security" }]
+    : baseNavItems;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">

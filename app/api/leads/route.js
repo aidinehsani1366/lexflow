@@ -1,10 +1,36 @@
 import { supabaseAdmin, getUserFromRequest } from "../../../lib/serverSupabase";
+import { logSecurityEvent } from "../../../lib/securityLogger";
 
 const jsonResponse = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX = 5;
+const rateLimitStore = new Map();
+const SPAM_TERMS = ["loan", "crypto", "seo", "marketing", "viagra", "casino", "forex"];
+
+function isRateLimited(ipAddress) {
+  if (!ipAddress) return false;
+  const now = Date.now();
+  const hits = rateLimitStore.get(ipAddress) || [];
+  const recent = hits.filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
+  recent.push(now);
+  rateLimitStore.set(ipAddress, recent);
+  return recent.length > RATE_LIMIT_MAX;
+}
+
+function looksLikeSpam(body) {
+  const summary = body?.summary?.toLowerCase() || "";
+  const combined = `${summary} ${body?.contact_name || ""} ${body?.case_type || ""}`.toLowerCase();
+  let score = 0;
+  if (!summary || summary.length < 12) score += 1;
+  if (/(https?:\/\/|www\.)/.test(combined)) score += 1;
+  if (SPAM_TERMS.some((term) => combined.includes(term))) score += 1;
+  return score >= 2;
+}
 
 async function getProfile(userId) {
   const { data, error } = await supabaseAdmin
@@ -70,12 +96,37 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
+  const requestIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
   try {
     const body = await req.json();
     const contact_name = body?.contact_name?.trim();
     if (!contact_name) {
       return jsonResponse({ error: "Name is required." }, 400);
     }
+    if (!body?.consent) {
+      return jsonResponse({ error: "Consent is required." }, 400);
+    }
+    const ipAddress = requestIp;
+
+    if (isRateLimited(ipAddress)) {
+      await logSecurityEvent("lead_rate_limited", {
+        ip: ipAddress,
+        email: body?.email || null,
+      });
+      return jsonResponse({ error: "Too many submissions. Please try again later." }, 429);
+    }
+
+    if (looksLikeSpam(body)) {
+      await logSecurityEvent("lead_spam_blocked", {
+        ip: ipAddress,
+        email: body?.email || null,
+      });
+      return jsonResponse({ error: "Submission flagged as spam." }, 400);
+    }
+
+    const consentText =
+      body?.consent_text ||
+      "I agree that LexFlow and its partner law firms may contact me about my case.";
 
     const payload = {
       contact_name,
@@ -87,14 +138,30 @@ export async function POST(req) {
       source: body?.source || "website",
       metadata: body?.metadata || null,
       firm_id: body?.firm_id || null,
+      consent_text: consentText,
+      consented_at: new Date().toISOString(),
+      submitted_ip: ipAddress,
     };
 
-    const { error } = await supabaseAdmin.from("leads").insert(payload);
+    const { data, error } = await supabaseAdmin.from("leads").insert(payload).select().single();
     if (error) throw error;
+
+    await supabaseAdmin.from("lead_events").insert({
+      lead_id: data.id,
+      event_type: "intake_submitted",
+      details: {
+        source: payload.source,
+        consent_text: payload.consent_text,
+      },
+    });
 
     return jsonResponse({ success: true }, 201);
   } catch (err) {
     console.error("POST /api/leads error:", err);
+    await logSecurityEvent("lead_intake_failed", {
+      error: err.message,
+      ip: requestIp,
+    });
     return jsonResponse({ error: err.message || "Failed to submit lead" }, 500);
   }
 }

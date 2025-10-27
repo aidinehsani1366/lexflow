@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
@@ -11,10 +12,17 @@ const documentTypes = [
   "Other",
 ];
 
-export default function FileList({ caseId, refreshToken = 0 }) {
-  const [rows, setRows] = useState([]);
+const formatBytes = (bytes) => {
+  if (!bytes || Number.isNaN(bytes)) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+export default function FileList({ caseId, refreshToken = 0, onOpenChat }) {
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     file_name: "",
@@ -22,32 +30,30 @@ export default function FileList({ caseId, refreshToken = 0 }) {
     notes: "",
   });
 
-  const loadChecklists = async () => {
+  const getToken = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("Authentication expired. Please sign in again.");
+    return token;
+  };
+
+  const loadDocuments = async () => {
     if (!caseId) {
-      setError("Missing case context.");
-      setRows([]);
+      setDocuments([]);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      setError(null);
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in.");
-
-      const { data, error } = await supabase
-        .from("checklists")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("case_id", caseId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setRows(data || []);
+      const token = await getToken();
+      const res = await fetch(`/api/cases/${caseId}/documents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to load documents");
+      setDocuments(payload.data || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -56,16 +62,16 @@ export default function FileList({ caseId, refreshToken = 0 }) {
   };
 
   useEffect(() => {
-    loadChecklists();
+    loadDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseId, refreshToken]);
 
-  const startEditing = (row) => {
-    setEditingId(row.id);
+  const startEditing = (doc) => {
+    setEditingId(doc.id);
     setFormData({
-      file_name: row.file_name || "",
-      document_type: row.document_type || documentTypes[0],
-      notes: row.notes || "",
+      file_name: doc.file_name || "",
+      document_type: doc.document_type || documentTypes[0],
+      notes: doc.notes || "",
     });
   };
 
@@ -81,43 +87,42 @@ export default function FileList({ caseId, refreshToken = 0 }) {
   const handleSave = async () => {
     if (!editingId) return;
     try {
-      const { error: updateError } = await supabase
-        .from("checklists")
-        .update({
-          file_name: formData.file_name.trim() || "Untitled document",
+      const token = await getToken();
+      const res = await fetch(`/api/case-documents/${editingId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          file_name: formData.file_name,
           document_type: formData.document_type,
-          notes: formData.notes || null,
-        })
-        .eq("id", editingId);
-
-      if (updateError) throw updateError;
+          notes: formData.notes,
+        }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Update failed");
       cancelEditing();
-      loadChecklists();
+      loadDocuments();
     } catch (err) {
-      alert("Update failed: " + err.message);
+      alert(err.message);
     }
   };
 
-  const handleDelete = async (row) => {
-    if (!confirm(`Delete "${row.file_name}"?`)) return;
-
+  const handleDelete = async (doc) => {
+    if (!window.confirm(`Delete "${doc.file_name}"?`)) return;
     try {
-      const { error: dbError } = await supabase
-        .from("checklists")
-        .delete()
-        .eq("id", row.id);
-
-      if (dbError) throw dbError;
-
-      const { error: storageError } = await supabase.storage
-        .from("documents")
-        .remove([`${row.user_id}/${row.file_name}`]);
-
-      if (storageError) throw storageError;
-
-      loadChecklists();
+      const token = await getToken();
+      const res = await fetch(`/api/case-documents/${doc.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Delete failed");
+      if (editingId === doc.id) cancelEditing();
+      loadDocuments();
     } catch (err) {
-      alert("Delete failed: " + err.message);
+      alert(err.message);
     }
   };
 
@@ -145,54 +150,57 @@ export default function FileList({ caseId, refreshToken = 0 }) {
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-slate-900">Analyzed documents</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Case documents</h3>
         <p className="text-sm text-slate-500">
-          LexFlow stores AI checklists alongside each uploaded pleading.
+          View uploads and open them with AI once you’re ready to analyze.
         </p>
       </div>
-      {rows.length === 0 ? (
+      {documents.length === 0 ? (
         <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-slate-500">
           <p className="text-lg">📂 No documents for this case yet</p>
           <p className="text-sm mt-1">Upload your first pleading to get started.</p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {rows.map((row) => (
+          {documents.map((doc) => (
             <li
-              key={row.id}
+              key={doc.id}
               className="flex flex-col border border-white/70 bg-white/90 rounded-2xl px-4 py-3 shadow-sm hover:-translate-y-0.5 transition"
             >
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-800">{row.file_name}</p>
+                  <p className="text-sm font-medium text-slate-800">{doc.file_name}</p>
                   <p className="text-xs text-slate-400">
-                    Uploaded {new Date(row.created_at).toLocaleString()}
+                    Uploaded {new Date(doc.created_at).toLocaleString()} · {formatBytes(doc.file_size)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Type: {doc.document_type || "General"}
+                    {doc.notes ? ` · Notes: ${doc.notes}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => startEditing(row)}
+                    onClick={() => onOpenChat?.(doc)}
+                    className="text-xs uppercase tracking-wide text-indigo-600 hover:text-indigo-800"
+                  >
+                    Chat with AI
+                  </button>
+                  <button
+                    onClick={() => startEditing(doc)}
                     className="text-xs uppercase tracking-wide text-slate-500 hover:text-slate-800"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(row)}
+                    onClick={() => handleDelete(doc)}
                     className="text-xs uppercase tracking-wide text-red-500 hover:text-red-700"
                   >
                     Delete
                   </button>
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                <span className="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700 font-semibold">
-                  {row.document_type || "General"}
-                </span>
-                <span>
-                  Notes: {row.notes ? row.notes : "—"}
-                </span>
-              </div>
-              {editingId === row.id ? (
+
+              {editingId === doc.id && (
                 <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
                   <input
                     className="w-full rounded-2xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-100"
@@ -220,32 +228,22 @@ export default function FileList({ caseId, refreshToken = 0 }) {
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, notes: e.target.value }))
                     }
-                    placeholder="Notes"
+                    placeholder="Optional notes"
                   />
-                  <div className="flex justify-end gap-2 text-sm">
+                  <div className="flex gap-2 justify-end">
                     <button
-                      type="button"
                       onClick={cancelEditing}
-                      className="rounded-full border border-slate-200 px-4 py-1"
+                      className="rounded-full border border-slate-200 px-4 py-1 text-xs font-semibold text-slate-600"
                     >
                       Cancel
                     </button>
                     <button
-                      type="button"
                       onClick={handleSave}
-                      className="rounded-full bg-slate-900 px-4 py-1 text-white"
+                      className="rounded-full bg-slate-900 px-4 py-1 text-xs font-semibold text-white hover:-translate-y-0.5"
                     >
-                      Save
+                      Save changes
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-3 text-sm text-slate-600 space-y-1">
-                  {row.checklist
-                    ? row.checklist.split(/\n+/).map((line, idx) => (
-                        <p key={idx}>• {line.trim()}</p>
-                      ))
-                    : "No checklist generated."}
                 </div>
               )}
             </li>

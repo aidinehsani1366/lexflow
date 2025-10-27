@@ -11,6 +11,11 @@ const ROLE_OPTIONS = [
   { value: "firm_staff", label: "Firm Staff" },
 ];
 
+const DEFAULT_EMBED_ORIGIN =
+  typeof process !== "undefined" && process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : "";
+
 export default function RolesPage() {
   const [profiles, setProfiles] = useState([]);
   const [firms, setFirms] = useState([]);
@@ -20,7 +25,7 @@ export default function RolesPage() {
   const [firmForm, setFirmForm] = useState({ name: "", contact_email: "" });
   const [firmMessage, setFirmMessage] = useState("");
   const [firmSubmitting, setFirmSubmitting] = useState(false);
-  const [embedOrigin, setEmbedOrigin] = useState("");
+  const [embedOrigin, setEmbedOrigin] = useState(DEFAULT_EMBED_ORIGIN);
   const [copiedFirmId, setCopiedFirmId] = useState("");
   const { profile, loading: profileLoading } = useProfile();
   const isSuperAdmin = profile?.role === "admin";
@@ -71,7 +76,7 @@ export default function RolesPage() {
   }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (!DEFAULT_EMBED_ORIGIN && typeof window !== "undefined") {
       setEmbedOrigin(window.location.origin);
     }
   }, []);

@@ -119,7 +119,7 @@ export default function CalendarView({
   );
 
   const renderMonthView = () => (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-7 gap-1.5">
       {DAY_LABELS.map((label) => (
         <div key={label} className="text-xs font-semibold uppercase tracking-wide text-slate-500">
           {label}
@@ -133,13 +133,13 @@ export default function CalendarView({
         return (
           <div
             key={key}
-            className={`min-h-[120px] rounded-xl border p-2 ${
+            className={`min-h-[96px] rounded-xl border p-2 ${
               isToday ? "border-indigo-500 bg-indigo-50" : "border-slate-100 bg-white"
             } ${!isCurrentMonth ? "opacity-50" : ""}`}
           >
             <button
               onClick={() => onSelectDate?.(day)}
-              className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold ${
+              className={`mb-2 inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
                 isToday ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -163,7 +163,7 @@ export default function CalendarView({
   );
 
   const renderWeekView = () => (
-    <div className="grid grid-cols-7 gap-3">
+    <div className="grid grid-cols-7 gap-2">
       {weekDays.map((day) => {
         const key = day.getTime();
         const dayEvents = eventsByDay.get(key) || [];
@@ -171,7 +171,7 @@ export default function CalendarView({
         return (
           <div
             key={key}
-            className={`rounded-xl border px-3 py-2 ${
+            className={`rounded-xl border px-2.5 py-2 ${
               isToday ? "border-indigo-500 bg-indigo-50" : "border-slate-100 bg-white"
             }`}
           >
@@ -188,7 +188,7 @@ export default function CalendarView({
             </div>
             <div className="space-y-2">
               {dayEvents.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-xs text-slate-400">
+                <p className="rounded-lg border border-dashed border-slate-200 px-3 py-3 text-xs text-slate-400">
                   No events
                 </p>
               ) : (

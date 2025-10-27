@@ -1,20 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { usePlan } from "../lib/usePlan";
 
 const promptSuggestions = [
   {
-    label: "Generate checklist",
-    prompt: "Generate a compliance checklist based on the latest documents in this case.",
+    label: "Summarize latest activity",
+    prompt: "Summarize the most recent filings and note any open questions for the team.",
   },
   {
-    label: "Summarize docs",
-    prompt: "Summarize the most recent filings and highlight upcoming obligations.",
+    label: "Ask about deadlines",
+    prompt: "Review upcoming deadlines for this case and highlight any we might be missing.",
   },
   {
-    label: "Flag risks",
-    prompt: "List potential risks or missing filings we should address next.",
+    label: "Outline next steps",
+    prompt: "Given the current posture of this matter, outline recommended next steps and owners.",
   },
 ];
 
@@ -32,6 +32,7 @@ export default function CaseChat({ caseId }) {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [deletingMessageId, setDeletingMessageId] = useState(null);
 
   useEffect(() => {
     setSessions([]);
@@ -95,6 +96,10 @@ export default function CaseChat({ caseId }) {
     };
     fetchMessages();
   }, [caseId, selectedSessionId]);
+
+  useEffect(() => {
+    setDeletingMessageId(null);
+  }, [selectedSessionId, caseId]);
 
   const sendMessage = async (content) => {
     if (!content || !caseId || !selectedSessionId) return;
@@ -170,6 +175,31 @@ export default function CaseChat({ caseId }) {
     }
   };
 
+  const handleDeleteSession = async (sessionId) => {
+    if (!window.confirm("Delete this session? Chat history will be removed.")) return;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("No auth token found");
+
+      const res = await fetch(`/api/cases/${caseId}/sessions?sessionId=${sessionId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to delete session");
+      setSessions((prev) => prev.filter((session) => session.id !== sessionId));
+      if (selectedSessionId === sessionId) {
+        setSelectedSessionId((prev) => {
+          const remaining = sessions.filter((session) => session.id !== sessionId);
+          return remaining.length ? remaining[0].id : null;
+        });
+      }
+    } catch (err) {
+      setSessionError(err.message);
+    }
+  };
+
   const togglePin = (message) => {
     setPinnedMessages((prev) => {
       const exists = prev.find((item) => item.id === message.id);
@@ -177,6 +207,97 @@ export default function CaseChat({ caseId }) {
         return prev.filter((item) => item.id !== message.id);
       }
       return [...prev, message];
+    });
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!messageId || !caseId || !selectedSessionId) return;
+    if (!window.confirm("Delete this message from the chat history?")) return;
+    setDeletingMessageId(messageId);
+    setError("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("No auth token found");
+
+      const res = await fetch(
+        `/api/cases/${caseId}/messages?sessionId=${selectedSessionId}&messageId=${messageId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Failed to delete message");
+      const updatedMessages = payload.data || [];
+      setMessages(updatedMessages);
+      setPinnedMessages((prev) =>
+        prev.filter((item) => updatedMessages.some((msg) => msg.id === item.id))
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  const renderContent = (content) => {
+    const lines = content.split(/\r?\n/);
+    const nodes = [];
+    let paragraph = [];
+    let list = [];
+
+    const pushParagraph = () => {
+      if (paragraph.length) {
+        nodes.push({ type: "p", text: paragraph.join(" ") });
+        paragraph = [];
+      }
+    };
+
+    const pushList = () => {
+      if (list.length) {
+        nodes.push({ type: "ul", items: list.slice() });
+        list = [];
+      }
+    };
+
+    lines.forEach((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) {
+        pushParagraph();
+        pushList();
+        return;
+      }
+      const bullet = line.match(/^[-*]\s+(.*)/);
+      if (bullet) {
+        pushParagraph();
+        list.push(bullet[1]);
+      } else {
+        pushList();
+        paragraph.push(line);
+      }
+    });
+
+    pushParagraph();
+    pushList();
+
+    return nodes.map((node, idx) => {
+      if (node.type === "ul") {
+        return (
+          <ul key={`list-${idx}`} className="list-disc space-y-1 pl-5">
+            {node.items.map((item, itemIdx) => (
+              <li key={itemIdx} className="leading-relaxed">
+                {item}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      return (
+        <p key={`p-${idx}`} className="leading-relaxed">
+          {node.text}
+        </p>
+      );
     });
   };
 
@@ -217,22 +338,36 @@ export default function CaseChat({ caseId }) {
           ) : filteredSessions.length === 0 ? (
             <p className="text-xs text-slate-500">No sessions yet.</p>
           ) : (
-            filteredSessions.map((session) => (
-              <button
-                key={session.id}
-                onClick={() => setSelectedSessionId(session.id)}
-                className={`w-full rounded-2xl border px-3 py-2 text-left text-sm ${
-                  selectedSessionId === session.id
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700"
-                    : "border-slate-200 hover:bg-slate-50"
-                }`}
-              >
-                <p className="font-semibold">{session.title}</p>
-                <p className="text-xs text-slate-400">
-                  {new Date(session.created_at).toLocaleDateString()}
-                </p>
-              </button>
-            ))
+            filteredSessions.map((session) => {
+              const isSelected = selectedSessionId === session.id;
+              return (
+                <div
+                  key={session.id}
+                  className={`flex items-center justify-between rounded-2xl border px-3 py-2 text-sm transition ${
+                    isSelected
+                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <button
+                    onClick={() => setSelectedSessionId(session.id)}
+                    className="flex-1 text-left"
+                  >
+                    <p className="font-semibold">{session.title}</p>
+                    <p className="text-xs text-slate-400">
+                      {new Date(session.created_at).toLocaleDateString()}
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSession(session.id)}
+                    className="ml-2 rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-red-50 hover:text-red-600"
+                    title="Delete session"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })
           )}
         </div>
       </aside>
@@ -283,7 +418,7 @@ export default function CaseChat({ caseId }) {
           {loading ? (
             <p className="text-sm text-slate-500">Loading conversation...</p>
           ) : messages.length === 0 ? (
-            <p className="text-sm text-slate-500">No messages yet. Start by asking for a checklist.</p>
+            <p className="text-sm text-slate-500">No messages yet. Ask a strategy question or request a summary to get started.</p>
           ) : (
             messages.map((msg) => {
               const isAI = msg.sender === "ai";
@@ -302,7 +437,7 @@ export default function CaseChat({ caseId }) {
                       isAI ? "bg-indigo-50" : "bg-white border"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-semibold uppercase text-slate-400 mb-1">
                         {isAI ? "LexFlow" : "You"} · {" "}
                         {new Date(msg.created_at).toLocaleTimeString([], {
@@ -310,15 +445,35 @@ export default function CaseChat({ caseId }) {
                           minute: "2-digit",
                         })}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => togglePin(msg)}
-                        className={`text-xs ${isPinned ? "text-indigo-600" : "text-slate-400"}`}
-                      >
-                        {isPinned ? "★" : "☆"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => togglePin(msg)}
+                          className={`text-xs ${isPinned ? "text-indigo-600" : "text-slate-400"}`}
+                          title={isPinned ? "Unpin message" : "Pin message"}
+                        >
+                          {isPinned ? "★" : "☆"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          disabled={deletingMessageId === msg.id}
+                          className={`text-xs font-semibold ${
+                            deletingMessageId === msg.id
+                              ? "text-slate-300"
+                              : "text-red-500 hover:text-red-600"
+                          }`}
+                          title="Delete message"
+                        >
+                          {deletingMessageId === msg.id ? "…" : "Delete"}
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-slate-700">{msg.content}</p>
+                    <div className="space-y-2 text-slate-700">
+                      {renderContent(msg.content).map((node, idx) => (
+                        <Fragment key={idx}>{node}</Fragment>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
@@ -330,7 +485,7 @@ export default function CaseChat({ caseId }) {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="e.g., Draft a checklist for opposing counsel's discovery request."
+          placeholder="e.g., What should we prepare before the status conference?"
             className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             rows={3}
             disabled={!selectedSessionId}

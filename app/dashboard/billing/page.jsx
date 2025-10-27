@@ -11,7 +11,7 @@ const PLANS = [
     price: "$49/mo",
     description: "Independent lawyers managing a focused docket.",
     seats: "1 seat",
-    features: ["AI checklists", "Document uploads", "Email reminders"],
+    features: ["7-day free trial", "AI document workspace", "Deadline reminders"],
   },
   {
     id: "team",
@@ -49,6 +49,13 @@ export default function BillingPage() {
   const activePlanId = plan?.plan || "solo";
   const planOrder = { solo: 0, team: 1, firm: 2 };
   const currentRank = planOrder[activePlanId] ?? 0;
+  const isTrialing = plan?.status === "trialing";
+  const trialEnds = plan?.trial_ends_at ? new Date(plan.trial_ends_at) : null;
+  const trialDaysRemaining =
+    trialEnds && !Number.isNaN(trialEnds.getTime())
+      ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null;
+  const trialEnded = plan?.status === "past_due";
 
   const startCheckout = async (planId) => {
     setCheckoutPlan(planId);
@@ -126,14 +133,37 @@ export default function BillingPage() {
             {!loading && (
               <span>Seat limit: {plan?.seat_limit || 1}</span>
             )}
-            <button
-              onClick={handlePortal}
-              disabled={portalLoading}
-              className="ml-auto rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-            >
-              {portalLoading ? "Opening…" : "Manage billing"}
-            </button>
+            {isTrialing ? (
+              <button
+                onClick={() => startCheckout(activePlanId)}
+                disabled={checkoutPlan === activePlanId}
+                className="ml-auto rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {checkoutPlan === activePlanId ? "Redirecting…" : "Start Solo subscription"}
+              </button>
+            ) : (
+              <button
+                onClick={handlePortal}
+                disabled={portalLoading}
+                className="ml-auto rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {portalLoading ? "Opening…" : "Manage billing"}
+              </button>
+            )}
           </div>
+          {isTrialing && (
+            <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs text-indigo-800">
+              Your 7-day solo trial is active
+              {trialDaysRemaining !== null
+                ? ` · ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left`
+                : ""}. Add cases and documents freely—activate billing anytime to keep access after the trial.
+            </div>
+          )}
+          {trialEnded && (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+              Your trial has ended. Activate a subscription to continue using LexFlow without interruption.
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">

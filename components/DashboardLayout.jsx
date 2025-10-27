@@ -20,6 +20,11 @@ export default function DashboardLayout({ children }) {
   const navItems = profile?.role === "admin"
     ? [...baseNavItems, { label: "Security", href: "/dashboard/security" }]
     : baseNavItems;
+  const trialEnds = plan?.trial_ends_at ? new Date(plan.trial_ends_at) : null;
+  const trialDaysRemaining =
+    trialEnds && !Number.isNaN(trialEnds.getTime())
+      ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -74,8 +79,12 @@ export default function DashboardLayout({ children }) {
                   >
                     {plan.plan === "solo" && "Solo"}
                     {plan.plan === "team" && "Team"}
-                    {plan.plan === "firm" && "Firm"}
-                    {" "}plan
+                    {plan.plan === "firm" && "Firm"} plan
+                    {plan.status === "trialing" && trialDaysRemaining !== null
+                      ? ` · Trial ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left`
+                      : plan.status === "past_due"
+                      ? " · Trial ended"
+                      : ""}
                   </Link>
                 ) : (
                   <div className="h-8 w-24 rounded-full bg-slate-200 animate-pulse" />

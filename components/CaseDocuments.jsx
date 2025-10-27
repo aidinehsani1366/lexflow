@@ -2,9 +2,11 @@
 import { useEffect, useState } from "react";
 import UploadDocument from "./UploadDocument";
 import FileList from "./FileList";
+import DocumentChatPanel from "./DocumentChatPanel";
 
 export default function CaseDocuments({ caseId }) {
   const [refreshToken, setRefreshToken] = useState(0);
+  const [activeDocument, setActiveDocument] = useState(null);
 
   useEffect(() => {
     setRefreshToken(0);
@@ -23,8 +25,8 @@ export default function CaseDocuments({ caseId }) {
       <div className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
         <h2 className="text-2xl font-semibold text-slate-900">Documents</h2>
         <p className="text-sm text-slate-500 mt-2">
-          Keep pleadings, discovery, and correspondence scoped to this workspace. Uploads sync
-          to Supabase storage and generate AI checklists instantly.
+          Keep pleadings, discovery, and correspondence scoped to this workspace. Uploads are indexed
+          for AI so you can ask case-specific questions on demand.
         </p>
       </div>
       <UploadDocument
@@ -32,8 +34,19 @@ export default function CaseDocuments({ caseId }) {
         onUploaded={() => setRefreshToken((prev) => prev + 1)}
       />
       <div className="rounded-3xl border border-white/80 bg-white/90 p-6 shadow-sm">
-        <FileList caseId={caseId} refreshToken={refreshToken} />
+        <FileList
+          caseId={caseId}
+          refreshToken={refreshToken}
+          onOpenChat={(doc) => setActiveDocument(doc)}
+        />
       </div>
+      {activeDocument && (
+        <DocumentChatPanel
+          document={activeDocument}
+          caseId={caseId}
+          onClose={() => setActiveDocument(null)}
+        />
+      )}
     </div>
   );
 }

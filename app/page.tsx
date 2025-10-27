@@ -3,45 +3,45 @@ import { useState, FormEvent } from "react";
 import Link from "next/link";
 
 const stats = [
-  { label: "Deadlines tracked", value: "32k+" },
-  { label: "Docs analyzed", value: "11k+" },
-  { label: "Avg. time saved / case", value: "6.2 hrs" },
+  { label: "Cases orchestrated", value: "1.8k+" },
+  { label: "Document chats powered", value: "9.4k+" },
+  { label: "Audit events captured", value: "68k+" },
 ];
 
 const features = [
   {
-    title: "Matter timeline",
+    title: "AI Briefing Hub",
     description:
-      "Centralize pleadings, court dates, and reminders with jurisdiction-aware templates.",
+      "Summon context-aware answers across every filing, deadline, and pinned insight in a single tab.",
   },
   {
-    title: "Trust-but-verify intake",
+    title: "Document-to-Action Chat",
     description:
-      "Consent text, IP, and audit-ready history are captured for every public and partner submission.",
+      "Upload pleadings once—LexFlow indexes the text, cites excerpts, and lets you interrogate the doc instantly.",
   },
   {
-    title: "Partner revenue console",
+    title: "Partner intake network",
     description:
-      "Embed-ready widgets, referral fee tracking, and dashboards keep every firm accountable.",
+      "Consent-backed forms, referral tracking, and revenue dashboards keep every partner relationship accountable.",
   },
 ];
 
 const workflow = [
-  "Create a case workspace with one click.",
-  "Upload discovery, motions, or correspondence.",
-  "LexFlow extracts deadlines, filings, and next steps.",
-  "Assign tasks, invite teammates, and keep chat history.",
+  "Launch a case workspace and invite collaborators.",
+  "Upload discovery, motions, or briefs and open an instant doc chat.",
+  "Ask the AI Briefing tab for deadlines, risks, and next steps across the matter.",
+  "Share partner widgets, log referral fees, and keep the audit trail in sync.",
 ];
 
 const testimonials = [
   {
     quote:
-      "LexFlow replaced three spreadsheets and a whiteboard. My team closes matters faster and nothing slips.",
+      "The AI Briefing tab is our morning stand-up. It cites filings, surfaces risks, and keeps partners aligned without digging through PDFs.",
     author: "Priya Menon, Managing Partner – Menon Law Group",
   },
   {
     quote:
-      "We upload a PDF and the AI checklist is ready before the partner finishes coffee. It's now part of our intake process.",
+      "LexFlow’s doc chat caught a missed deadline buried in ECF 92 and alerted the calendar instantly. That alone justified the rollout.",
     author: "Daniel Brown, Litigation Associate – KEG LLP",
   },
 ];
@@ -171,38 +171,38 @@ export default function LexFlowLanding() {
                 Trusted by boutique firms
               </p>
               <h1 className="text-4xl md:text-5xl font-semibold leading-tight text-slate-900">
-                Orchestrate deadlines, filings, and client updates —{" "}
+                Run every matter from one AI briefing, document chat,{" "}
                 <span className="text-transparent bg-gradient-to-r from-indigo-600 to-sky-500 bg-clip-text">
-                  all in one elegant workspace.
+                  and partner-ready workspace.
                 </span>
               </h1>
               <p className="text-lg text-slate-600">
-                LexFlow translates documents into action plans, keeps every case
-                organized, and gives your team a modern control center for
-                litigation, compliance, and partner revenue tracking.
+                LexFlow ingests your filings, calendars deadlines, and lets you interrogate
+                documents in context. Stay compliant, keep partners in the loop, and turn every upload
+                into actionable next steps.
               </p>
               <div className="flex flex-wrap gap-4">
                 <a
-                  href="#waitlist"
+                  href="#pricing"
                   className="px-6 py-3 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 hover:-translate-y-0.5 transition"
                 >
-                  Join early access
+                  Start your free trial
                 </a>
                 <a
                   href="#pricing"
                   className="px-6 py-3 rounded-full border border-slate-200 text-slate-800 hover:bg-white transition"
                 >
-                  See pricing
+                  Compare plans
                 </a>
                 <a
-                  href="/dashboard/insights"
+                  href="/docs/insights-demo"
                   className="px-6 py-3 rounded-full border border-indigo-100 text-indigo-600 hover:bg-indigo-50 transition"
                 >
                   View analytics demo
                 </a>
               </div>
               <p className="text-sm text-slate-500">
-                Early partner benefit: 3 months of the Team plan, on us.
+                Every new solo account includes a 7-day trial—upgrade in Stripe whenever you’re ready.
               </p>
             </div>
             <div className="glass-panel p-8 relative overflow-hidden">
@@ -231,7 +231,7 @@ export default function LexFlowLanding() {
                       <span className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
                         2
                       </span>
-                      Prep discovery checklist for opposing counsel
+                      Prep discovery responses for opposing counsel
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
@@ -244,11 +244,11 @@ export default function LexFlowLanding() {
                 <div className="rounded-2xl bg-slate-900 p-5 text-white space-y-3 shadow-xl">
                   <p className="text-xs uppercase tracking-[0.3em] text-white/70">
                     LexFlow AI
-                  </p>
-                  <p className="text-sm text-white/90">
-                    “Discovery request references three missing certifications.
-                    Add them to the compliance checklist and alert Priya.”
-                  </p>
+                    </p>
+                    <p className="text-sm text-white/90">
+                      “Document chat spotted three missing certifications and scheduled reminders.
+                      I’ve tagged Priya so the client update goes out today.”
+                    </p>
                 </div>
               </div>
             </div>
@@ -388,8 +388,7 @@ export default function LexFlowLanding() {
                 Product pillars
               </p>
               <h2 className="text-3xl font-semibold text-slate-900 mt-3">
-                Legal intake software built for boutique and mid-size firms that
-                need clarity without enterprise bloat.
+                AI-native matter management for litigation, compliance, and partner revenue.
               </h2>
             </div>
             <div className="grid gap-6 md:grid-cols-3">
@@ -425,15 +424,15 @@ export default function LexFlowLanding() {
                 slip.
               </p>
               <ul className="space-y-2 text-sm text-slate-600">
-                <li>- &lt;script&gt; widget auto-fills firm metadata + branding.</li>
-                <li>- Lead history records consent, actor, and every status change.</li>
-                <li>- Referral fees track due dates, paid status, and revenue per firm.</li>
+                <li>Embed-ready widget mirrors partner branding and enforces consent language.</li>
+                <li>Lead history auto-records consent text, IP, and every assignment or status change.</li>
+                <li>Referral fees track due dates, payouts, and revenue share per matter.</li>
               </ul>
               <a
-                href="/dashboard/settings/roles"
+                href="/docs/partner-widget"
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
               >
-                Configure partner access →
+                Preview partner widget →
               </a>
             </div>
             <div className="space-y-4">
@@ -466,9 +465,9 @@ export default function LexFlowLanding() {
                 Upload a document. Receive context, tasks, and assignments.
               </h2>
               <p className="text-slate-600">
-                LexFlow parses every pleading, discovers missing steps, and
-                auto-builds the checklist you would expect from a senior
-                associate. Invite teammates and keep every decision documented.
+                LexFlow parses every pleading, cites relevant sections inside the chat, and updates
+                calendars, reminders, and partner logs automatically. Invite teammates and keep every
+                decision documented.
               </p>
             </div>
             <ol className="space-y-4">
@@ -528,7 +527,8 @@ export default function LexFlowLanding() {
               price: "$49",
               plan: "solo" as const,
               description: "Independent lawyers managing a focused docket.",
-              perks: ["Unlimited cases", "Deadline assistant", "AI summaries"],
+              perks: ["7-day free trial", "Unlimited cases", "Document chat workspace"],
+              cta: "Start free trial",
             },
             {
               name: "Team",
@@ -538,8 +538,8 @@ export default function LexFlowLanding() {
               description: "Firms with partners, associates, and paralegals.",
               perks: [
                 "Everything in Solo",
-                "AI compliance checklists",
-                "Shared calendar + exports",
+                "Collaborative AI Briefing & pinned insights",
+                "Shared calendar exports & alerts",
               ],
             },
             {
@@ -547,7 +547,7 @@ export default function LexFlowLanding() {
               price: "$399",
               plan: "firm" as const,
               description: "Full-service firms needing enterprise controls.",
-              perks: ["SSO + granular roles", "Priority onboarding", "Dedicated CSM"],
+              perks: ["SSO + granular roles", "Partner revenue ledger", "Dedicated CSM"],
             },
           ].map((plan) => (
                 <div
@@ -586,7 +586,7 @@ export default function LexFlowLanding() {
                         : "border border-slate-200 text-slate-800 hover:bg-white"
                     }`}
                   >
-                    Choose plan
+                    {plan.cta || "Choose plan"}
                   </button>
                 </div>
               ))}

@@ -51,6 +51,7 @@ export async function POST(req) {
             renewal_date: stripeSubscription.current_period_end
               ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
               : null,
+            trial_ends_at: null,
           })
           .eq("id", subscriptionRecord.id);
         break;
@@ -82,6 +83,7 @@ export async function POST(req) {
             renewal_date: stripeSubscription.current_period_end
               ? new Date(stripeSubscription.current_period_end * 1000).toISOString()
               : null,
+            trial_ends_at: null,
           })
           .eq("id", data.id);
         break;
@@ -98,6 +100,7 @@ export async function POST(req) {
             seat_limit: PLAN_PRESETS.solo.seat_limit,
             docs_quota: PLAN_PRESETS.solo.docs_quota,
             ai_quota: PLAN_PRESETS.solo.ai_quota,
+            trial_ends_at: null,
           })
           .eq("stripe_customer_id", customerId);
         break;

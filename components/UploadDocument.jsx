@@ -14,11 +14,10 @@ const documentTypes = [
 export default function UploadDocument({ caseId, onUploaded }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [checklist, setChecklist] = useState("");
   const [error, setError] = useState("");
   const [documentType, setDocumentType] = useState(documentTypes[0]);
   const [notes, setNotes] = useState("");
-  const [wasTruncated, setWasTruncated] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -27,12 +26,11 @@ export default function UploadDocument({ caseId, onUploaded }) {
     if (selected && selected.size > MAX_FILE_BYTES) {
       setError("File too large. Please upload a document under 5MB.");
       setFile(null);
-      setWasTruncated(false);
+      setSuccessMessage("");
       return;
     }
     setFile(selected || null);
-    setChecklist("");
-    setWasTruncated(false);
+    setSuccessMessage("");
     setError("");
   };
 
@@ -55,6 +53,9 @@ export default function UploadDocument({ caseId, onUploaded }) {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be signed in.");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Authentication expired. Please sign in again.");
 
       const filePath = `${user.id}/${Date.now()}_${file.name}`;
       const { error: uploadError } = await supabase.storage
@@ -63,31 +64,38 @@ export default function UploadDocument({ caseId, onUploaded }) {
 
       if (uploadError) throw uploadError;
 
-      const res = await fetch("/api/extract", {
+      const res = await fetch(`/api/cases/${caseId}/documents`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           filePath,
           fileName: file.name,
-          userId: user.id,
-          caseId,
+          fileSize: file.size,
+          mimeType: file.type || "application/octet-stream",
           documentType,
           notes: notes.trim() || null,
         }),
+        credentials: "omit",
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || "Upload failed");
+      }
 
-      const { checklist, truncated } = await res.json();
-      setChecklist(checklist);
-      setWasTruncated(!!truncated);
       setFile(null);
       setNotes("");
       setDocumentType(documentTypes[0]);
+      setSuccessMessage("Document uploaded and indexed for AI. Open it from the list to chat.");
       onUploaded?.();
     } catch (err) {
       setError(err.message);
-      setWasTruncated(false);
+      setSuccessMessage("");
     } finally {
       setUploading(false);
     }
@@ -99,7 +107,7 @@ export default function UploadDocument({ caseId, onUploaded }) {
         <div>
           <h3 className="text-xl font-semibold text-slate-900">Upload a legal document</h3>
           <p className="text-sm text-slate-500">
-            We’ll store it securely and extract a compliance checklist right away.
+            We’ll store it securely and make it searchable for AI briefings and document chat.
           </p>
         </div>
       </div>
@@ -159,16 +167,10 @@ export default function UploadDocument({ caseId, onUploaded }) {
           {error}
         </p>
       )}
-      {checklist && (
-        <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm whitespace-pre-line text-left">
-          <h4 className="font-semibold mb-2">AI Compliance Checklist</h4>
-          <p>{checklist}</p>
-          {wasTruncated && (
-            <p className="mt-2 text-xs text-slate-500">
-              Only the first portion of the document was analyzed due to size limits.
-            </p>
-          )}
-        </div>
+      {successMessage && (
+        <p className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-600">
+          {successMessage}
+        </p>
       )}
     </div>
   );

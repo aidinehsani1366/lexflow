@@ -47,7 +47,7 @@ export async function GET(req) {
     const sevenDaysIso = sevenDaysAgo.toISOString();
 
     const { count: docsCount, error: docsError } = await supabaseAdmin
-      .from("checklists")
+      .from("case_documents")
       .select("*", { count: "exact", head: true })
       .in("case_id", caseIds)
       .gte("created_at", sevenDaysIso);

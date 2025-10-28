@@ -153,6 +153,9 @@ export default function LexFlowLanding() {
             <Link href="#pricing" className="hover:text-slate-900">
               Pricing
             </Link>
+            <Link href="/blog" className="hover:text-slate-900">
+              Blog
+            </Link>
             <Link
               href="/dashboard"
               className="px-4 py-2 bg-slate-900 text-white rounded-full text-xs tracking-wide"

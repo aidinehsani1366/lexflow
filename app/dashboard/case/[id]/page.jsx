@@ -9,6 +9,7 @@ import CaseDocuments from "../../../../components/CaseDocuments";
 import CaseChat from "../../../../components/CaseChat";
 import CaseMembers from "../../../../components/CaseMembers";
 import CaseCalendar from "../../../../components/CaseCalendar";
+import CaseRecap from "../../../../components/CaseRecap";
 
 export default function CaseWorkspace({ params }) {
   const router = useRouter();
@@ -67,6 +68,8 @@ export default function CaseWorkspace({ params }) {
         return <CaseCalendar caseId={caseData?.id} />;
       case "ai":
         return <CaseChat caseId={caseData?.id} />;
+      case "recap":
+        return <CaseRecap caseId={caseData?.id} />;
       case "members":
         return <CaseMembers caseId={caseData?.id} />;
       default:

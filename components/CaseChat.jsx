@@ -1,7 +1,9 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { usePlan } from "../lib/usePlan";
+import MessageBubble from "./MessageBubble";
+import MessageContent from "./MessageContent";
 
 const promptSuggestions = [
   {
@@ -241,66 +243,6 @@ export default function CaseChat({ caseId }) {
     }
   };
 
-  const renderContent = (content) => {
-    const lines = content.split(/\r?\n/);
-    const nodes = [];
-    let paragraph = [];
-    let list = [];
-
-    const pushParagraph = () => {
-      if (paragraph.length) {
-        nodes.push({ type: "p", text: paragraph.join(" ") });
-        paragraph = [];
-      }
-    };
-
-    const pushList = () => {
-      if (list.length) {
-        nodes.push({ type: "ul", items: list.slice() });
-        list = [];
-      }
-    };
-
-    lines.forEach((rawLine) => {
-      const line = rawLine.trim();
-      if (!line) {
-        pushParagraph();
-        pushList();
-        return;
-      }
-      const bullet = line.match(/^[-*]\s+(.*)/);
-      if (bullet) {
-        pushParagraph();
-        list.push(bullet[1]);
-      } else {
-        pushList();
-        paragraph.push(line);
-      }
-    });
-
-    pushParagraph();
-    pushList();
-
-    return nodes.map((node, idx) => {
-      if (node.type === "ul") {
-        return (
-          <ul key={`list-${idx}`} className="list-disc space-y-1 pl-5">
-            {node.items.map((item, itemIdx) => (
-              <li key={itemIdx} className="leading-relaxed">
-                {item}
-              </li>
-            ))}
-          </ul>
-        );
-      }
-      return (
-        <p key={`p-${idx}`} className="leading-relaxed">
-          {node.text}
-        </p>
-      );
-    });
-  };
-
   if (!caseId) {
     return (
       <div className="rounded-3xl border border-white/80 bg-white/90 p-6 text-sm text-red-500">
@@ -414,7 +356,7 @@ export default function CaseChat({ caseId }) {
           </div>
         )}
 
-        <div className="rounded-lg border bg-slate-50 max-h-96 overflow-y-auto p-4 space-y-3">
+        <div className="rounded-3xl border border-white/70 bg-slate-50/80 max-h-96 overflow-y-auto p-4 space-y-4">
           {loading ? (
             <p className="text-sm text-slate-500">Loading conversation...</p>
           ) : messages.length === 0 ? (
@@ -424,58 +366,38 @@ export default function CaseChat({ caseId }) {
               const isAI = msg.sender === "ai";
               const isPinned = pinnedMessages.some((item) => item.id === msg.id);
               return (
-                <div key={msg.id} className="flex gap-3">
-                  <div
-                    className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-                      isAI ? "bg-indigo-100 text-indigo-700" : "bg-slate-900 text-white"
-                    }`}
-                  >
-                    {isAI ? "AI" : "You"}
-                  </div>
-                  <div
-                    className={`flex-1 rounded-2xl px-4 py-3 text-sm whitespace-pre-line ${
-                      isAI ? "bg-indigo-50" : "bg-white border"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase text-slate-400 mb-1">
-                        {isAI ? "LexFlow" : "You"} · {" "}
-                        {new Date(msg.created_at).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => togglePin(msg)}
-                          className={`text-xs ${isPinned ? "text-indigo-600" : "text-slate-400"}`}
-                          title={isPinned ? "Unpin message" : "Pin message"}
-                        >
-                          {isPinned ? "★" : "☆"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMessage(msg.id)}
-                          disabled={deletingMessageId === msg.id}
-                          className={`text-xs font-semibold ${
-                            deletingMessageId === msg.id
-                              ? "text-slate-300"
-                              : "text-red-500 hover:text-red-600"
-                          }`}
-                          title="Delete message"
-                        >
-                          {deletingMessageId === msg.id ? "…" : "Delete"}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-slate-700">
-                      {renderContent(msg.content).map((node, idx) => (
-                        <Fragment key={idx}>{node}</Fragment>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <MessageBubble
+                  key={msg.id}
+                  role={isAI ? "ai" : "user"}
+                  timestamp={msg.created_at}
+                  actions={
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => togglePin(msg)}
+                        className={`text-xs ${isPinned ? "text-indigo-600" : "text-slate-400"}`}
+                        title={isPinned ? "Unpin message" : "Pin message"}
+                      >
+                        {isPinned ? "★" : "☆"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        disabled={deletingMessageId === msg.id}
+                        className={`text-xs font-semibold ${
+                          deletingMessageId === msg.id
+                            ? "text-slate-300"
+                            : "text-red-500 hover:text-red-600"
+                        }`}
+                        title="Delete message"
+                      >
+                        {deletingMessageId === msg.id ? "…" : "Delete"}
+                      </button>
+                    </>
+                  }
+                >
+                  <MessageContent content={msg.content} />
+                </MessageBubble>
               );
             })
           )}
@@ -509,7 +431,7 @@ export default function CaseChat({ caseId }) {
               {pinnedMessages.map((msg) => (
                 <li key={msg.id}>
                   <span className="text-indigo-500 mr-2">★</span>
-                  {msg.content}
+                  <MessageContent content={msg.content} />
                 </li>
               ))}
             </ul>

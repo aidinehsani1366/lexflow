@@ -1,7 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import MessageBubble from "./MessageBubble";
+import MessageContent from "./MessageContent";
 
 const suggestionPrompts = [
   {
@@ -228,65 +230,6 @@ export default function DocumentChatPanel({ document, caseId, onClose }) {
 
   if (!document) return null;
 
-  const renderContent = (content) => {
-    const lines = content.split(/\r?\n/);
-    const nodes = [];
-    let currentParagraph = [];
-    let currentList = [];
-
-    const pushParagraph = () => {
-      if (currentParagraph.length) {
-        nodes.push({ type: "p", text: currentParagraph.join(" ") });
-        currentParagraph = [];
-      }
-    };
-    const pushList = () => {
-      if (currentList.length) {
-        nodes.push({ type: "ul", items: currentList.slice() });
-        currentList = [];
-      }
-    };
-
-    lines.forEach((rawLine) => {
-      const line = rawLine.trim();
-      if (!line) {
-        pushParagraph();
-        pushList();
-        return;
-      }
-      const bulletMatch = line.match(/^[-*]\s+(.*)/);
-      if (bulletMatch) {
-        pushParagraph();
-        currentList.push(bulletMatch[1]);
-      } else {
-        pushList();
-        currentParagraph.push(line);
-      }
-    });
-
-    pushParagraph();
-    pushList();
-
-    return nodes.map((node, idx) => {
-      if (node.type === "ul") {
-        return (
-          <ul key={`list-${idx}`} className="list-disc space-y-1 pl-5">
-            {node.items.map((item, itemIdx) => (
-              <li key={itemIdx} className="leading-relaxed">
-                {item}
-              </li>
-            ))}
-          </ul>
-        );
-      }
-      return (
-        <p key={`p-${idx}`} className="leading-relaxed">
-          {node.text}
-        </p>
-      );
-    });
-  };
-
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
       <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl lg:flex-row max-h-[90vh]">
@@ -377,24 +320,13 @@ export default function DocumentChatPanel({ document, caseId, onClose }) {
                 Ask a question about this document or use a quick suggestion below.
               </div>
             ) : (
-              <ul className="space-y-3">
+              <div className="space-y-4">
                 {messages.map((msg) => (
-                  <li
+                  <MessageBubble
                     key={msg.id}
-                    className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                      msg.role === "user"
-                        ? "bg-indigo-50 text-indigo-800"
-                        : "bg-white text-slate-700 border border-slate-100"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-xs uppercase tracking-wide text-slate-400">
-                        {msg.role === "assistant" ? "LexFlow" : "You"} ·{" "}
-                        {new Date(msg.created_at).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                    role={msg.role === "assistant" ? "ai" : "user"}
+                    timestamp={msg.created_at}
+                    actions={
                       <button
                         onClick={() => handleDeleteMessage(msg.id)}
                         disabled={deletingMessageId === msg.id}
@@ -408,15 +340,12 @@ export default function DocumentChatPanel({ document, caseId, onClose }) {
                       >
                         {deletingMessageId === msg.id ? "…" : "Delete"}
                       </button>
-                    </div>
-                    <div className="mt-2 space-y-2">
-                      {renderContent(msg.content).map((node, idx) => (
-                        <Fragment key={idx}>{node}</Fragment>
-                      ))}
-                    </div>
-                  </li>
+                    }
+                  >
+                    <MessageContent content={msg.content} />
+                  </MessageBubble>
                 ))}
-              </ul>
+              </div>
             )}
             {messageError && (
               <p className="mt-3 text-xs text-red-500">{messageError}</p>

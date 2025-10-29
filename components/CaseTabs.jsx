@@ -5,6 +5,7 @@ const tabs = [
   { id: "documents", label: "Documents", icon: "📁" },
   { id: "calendar", label: "Calendar", icon: "🗓️" },
   { id: "ai", label: "AI Workspace", icon: "✨" },
+  { id: "recap", label: "AI Recap", icon: "🧠" },
   { id: "members", label: "Members", icon: "👥" },
 ];
 
